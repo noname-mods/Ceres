@@ -1,0 +1,20 @@
+{
+  "farmbot.level_up": {
+    "sounds": [
+      {
+        "name": "farmbot:level_up",
+        "type": "file",
+        "stream": false
+      }
+    ]
+  },
+  "farmbot.soft_alert": {
+    "sounds": [
+      {
+        "name": "farmbot:soft_alert",
+        "type": "file",
+        "stream": false
+      }
+    ]
+  }
+}

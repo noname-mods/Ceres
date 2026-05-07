@@ -1,0 +1,12 @@
+{
+  "key.category.ceres.controls": "Ceres",
+
+  "key.ceres.toggle_hud":        "Toggle HUD",
+  "key.ceres.open_path_editor":  "Open Path Editor",
+  "key.ceres.open_config":       "Open Config",
+  "key.ceres.start_primary":     "Start Primary Path",
+  "key.ceres.start_secondary":   "Start Secondary Path",
+  "key.ceres.pause_bot":         "Pause",
+  "key.ceres.resume_bot":        "Resume",
+  "key.ceres.stop_bot":          "Stop"
+}

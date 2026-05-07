@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "ceres",
+  "version": "${version}",
+  "name": "Ceres",
+  "description": "Client-side automation helper for gathering and farming.",
+  "authors": ["NoName_"],
+  "contact": {
+    "sources": "https://github.com/noname-mods/Ceres"
+  },
+  "license": "LGPL-3",
+  "icon": "assets/ceres/icon.png",
+  "environment": "client",
+  "mixins": ["farmbot.mixins.json"],
+  "entrypoints": {
+    "client": ["com.ceres.CeresMod"],
+    "modmenu": ["com.ceres.modmenu.CeresModMenuPlugin"]
+  },
+  "depends": {
+    "fabricloader": ">=0.18.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*",
+    "playerapi": ">=1.0.0",
+    "yet_another_config_lib_v3": "*"
+  },
+  "suggests": {
+    "modmenu": "*"
+  }
+}

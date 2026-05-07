@@ -1,0 +1,401 @@
+package com.ceres.core;
+
+import com.ceres.path.CropToolMapper;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.playerapi.HumanProfile;
+import com.playerapi.SoundActions;
+import net.fabricmc.loader.api.FabricLoader;
+
+import java.io.Reader;
+import java.io.Writer;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+public class BotConfig {
+
+    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
+    private static final Path CONFIG_FILE = FabricLoader.getInstance()
+            .getConfigDir().resolve("ceres/config.json");
+
+    /**
+     * Increment this whenever a field is renamed, removed, or its meaning changes.
+     * Add a corresponding migrateVn() method in the migration section below.
+     *
+     * Version history:
+     *   0 — initial release (no version field present in file)
+     *   1 — alarm sound repeatCount (int, times) → durationSeconds (int, seconds)
+     *   2 — added autoLoadEnabled + autoLoadCrops (all default true)
+     *   3 — added hudLines per-row visibility map (all default true)
+     *   4 — added updateCheckEnabled (default true)
+     */
+    private static final int CURRENT_VERSION = 4;
+
+    /** All toggleable HUD row keys, in display order. */
+    public static final List<String> ALL_HUD_LINES = List.of(
+            "profile", "area", "xyz", "look", "pests",
+            "plots", "spray", "repellent", "bonus", "cooldown", "pest_chance",
+            "path", "bps", "target"
+    );
+
+    // INSTANCE must be declared AFTER ALL_HUD_LINES — the BotConfig() constructor
+    // iterates that list, so it must be non-null when <clinit> reaches this line.
+    private static final BotConfig INSTANCE = new BotConfig();
+
+    // Stored in the file so load() knows what migrations to run.
+    private int configVersion = CURRENT_VERSION;
+
+    // ── Bot settings ──────────────────────────────────────────────────────────
+    private int minPestCount = 4;
+    private int logLevel = BotLogger.LEVEL_WARN;
+    private boolean sneakOnPathStart = true;
+    private boolean repellentReapplyEnabled = true;
+
+    // ── Checker toggles ───────────────────────────────────────────────────────
+    private boolean inventoryCheckerEnabled = true;
+    private boolean toolCheckerEnabled = true;
+    private boolean yawPitchCheckerEnabled = true;
+    private boolean pestCheckerEnabled = true;
+
+    // ── Cycle mode ────────────────────────────────────────────────────────────
+    private boolean oneCycleMode = false;
+    private String cycleRestartCommand = "warp garden";
+
+    // ── Alarm sounds ──────────────────────────────────────────────────────────
+    private AlarmSound cycleCompleteSound = AlarmSound.defaultStop();
+    private AlarmSound stopAlertSound     = AlarmSound.defaultStop();
+    private AlarmSound warnAlertSound     = AlarmSound.defaultWarn();
+
+    // ── Auto-load ─────────────────────────────────────────────────────────────
+    private boolean autoLoadEnabled = true;
+    /** Per-crop enable flags. Keys are profile names from CropToolMapper.ALL_CROPS. */
+    private Map<String, Boolean> autoLoadCrops = new LinkedHashMap<>();
+
+    // ── HUD line visibility ────────────────────────────────────────────────────
+    /** Per-row visibility flags. Keys are entries from ALL_HUD_LINES. */
+    private Map<String, Boolean> hudLines = new LinkedHashMap<>();
+
+    // ── Update checker ────────────────────────────────────────────────────────
+    private boolean updateCheckEnabled = true;
+
+    // ── Developer ─────────────────────────────────────────────────────────────
+    private boolean bypassAreaCheck = false;
+    private boolean microLookEnabled = false;
+    private boolean debugMode = false;
+
+    private BotConfig() {
+        // Pre-populate per-crop map so GSON always has something to merge into
+        for (String crop : CropToolMapper.ALL_CROPS) {
+            autoLoadCrops.put(crop, true);
+        }
+        // Pre-populate HUD line map so GSON always has something to merge into
+        for (String key : ALL_HUD_LINES) {
+            hudLines.put(key, true);
+        }
+    }
+
+    public static BotConfig getInstance() {
+        return INSTANCE;
+    }
+
+    // ── AlarmSound data class ─────────────────────────────────────────────────
+
+    /**
+     * Configuration for a single alarm sound event.
+     * Sound IDs use the Minecraft resource format: "namespace:sound.id"
+     * Browse all vanilla sounds at: https://misode.github.io/sounds/
+     * Example: "minecraft:entity.player.levelup"
+     */
+    public static class AlarmSound {
+        public String soundId;
+        public double volume;          // 0.1 – 2.0
+        public double pitch;           // 0.5 – 2.0 (lower = slower and deeper)
+        public int    durationSeconds; // 0 – 30 seconds total alarm duration
+        public int    intervalTicks;   // 5 – 60 ticks between each play
+
+        public AlarmSound() {}
+
+        public AlarmSound(String soundId, double volume, double pitch, int durationSeconds, int intervalTicks) {
+            this.soundId         = soundId;
+            this.volume          = volume;
+            this.pitch           = pitch;
+            this.durationSeconds = durationSeconds;
+            this.intervalTicks   = intervalTicks;
+        }
+
+        /** Default for stop-type alerts (cycle complete, checker stops). */
+        public static AlarmSound defaultStop() {
+            return new AlarmSound("minecraft:entity.player.levelup", 1.0, 1.0, 10, 20);
+        }
+
+        /** Default for warning-type alerts (yaw/pitch, pest count). */
+        public static AlarmSound defaultWarn() {
+            return new AlarmSound("minecraft:entity.experience_orb.pickup", 1.0, 1.5, 5, 15);
+        }
+
+        /** Copy values from a loaded instance, keeping defaults for any invalid/missing fields. */
+        public void mergeFrom(AlarmSound src, AlarmSound defaults) {
+            soundId         = (src.soundId != null && !src.soundId.isBlank()) ? src.soundId : defaults.soundId;
+            volume          = src.volume > 0          ? src.volume          : defaults.volume;
+            pitch           = src.pitch > 0           ? src.pitch           : defaults.pitch;
+            durationSeconds = src.durationSeconds > 0 ? src.durationSeconds : defaults.durationSeconds;
+            intervalTicks   = src.intervalTicks > 0   ? src.intervalTicks   : defaults.intervalTicks;
+        }
+
+        /** Play this alarm sound, repeating for the configured duration. */
+        public void play() {
+            if (soundId == null || soundId.isBlank() || durationSeconds <= 0) return;
+            int totalTicks = durationSeconds * 20;
+            int times = Math.max(1, totalTicks / Math.max(1, intervalTicks));
+            SoundActions.playByIdRepeated(soundId, (float) volume, (float) pitch, times, intervalTicks);
+        }
+    }
+
+    // ── Load / Save ───────────────────────────────────────────────────────────
+
+    public void load() {
+        if (!Files.exists(CONFIG_FILE)) {
+            save();
+            applyRuntimeFields();
+            return;
+        }
+        try (Reader reader = Files.newBufferedReader(CONFIG_FILE)) {
+            JsonObject json = GSON.fromJson(reader, JsonObject.class);
+            if (json != null) {
+                json = migrate(json);
+                BotConfig loaded = GSON.fromJson(json, BotConfig.class);
+                if (loaded != null) {
+                    this.configVersion             = CURRENT_VERSION;
+                    this.minPestCount              = loaded.minPestCount;
+                    this.logLevel                  = loaded.logLevel;
+                    this.sneakOnPathStart          = loaded.sneakOnPathStart;
+                    this.repellentReapplyEnabled   = loaded.repellentReapplyEnabled;
+                    this.inventoryCheckerEnabled   = loaded.inventoryCheckerEnabled;
+                    this.toolCheckerEnabled        = loaded.toolCheckerEnabled;
+                    this.yawPitchCheckerEnabled    = loaded.yawPitchCheckerEnabled;
+                    this.pestCheckerEnabled        = loaded.pestCheckerEnabled;
+                    this.oneCycleMode              = loaded.oneCycleMode;
+                    this.cycleRestartCommand       = loaded.cycleRestartCommand != null ? loaded.cycleRestartCommand : "";
+                    this.autoLoadEnabled           = loaded.autoLoadEnabled;
+                    if (loaded.autoLoadCrops != null) {
+                        // Merge: keep default true for any crop not present in the file
+                        for (String crop : CropToolMapper.ALL_CROPS) {
+                            this.autoLoadCrops.put(crop,
+                                loaded.autoLoadCrops.getOrDefault(crop, true));
+                        }
+                    }
+                    if (loaded.hudLines != null) {
+                        // Merge: keep default true for any key not present in the file
+                        for (String key : ALL_HUD_LINES) {
+                            this.hudLines.put(key,
+                                loaded.hudLines.getOrDefault(key, true));
+                        }
+                    }
+                    this.updateCheckEnabled        = loaded.updateCheckEnabled;
+                    this.bypassAreaCheck           = loaded.bypassAreaCheck;
+                    this.microLookEnabled          = loaded.microLookEnabled;
+                    this.debugMode                 = loaded.debugMode;
+
+                    if (loaded.cycleCompleteSound != null)
+                        this.cycleCompleteSound.mergeFrom(loaded.cycleCompleteSound, AlarmSound.defaultStop());
+                    if (loaded.stopAlertSound != null)
+                        this.stopAlertSound.mergeFrom(loaded.stopAlertSound, AlarmSound.defaultStop());
+                    if (loaded.warnAlertSound != null)
+                        this.warnAlertSound.mergeFrom(loaded.warnAlertSound, AlarmSound.defaultWarn());
+                }
+            }
+        } catch (Exception e) {
+            BotLogger.getInstance().logError("BotConfig: Failed to load: " + e.getMessage());
+        }
+        applyRuntimeFields();
+        save(); // persist any migrations that ran
+    }
+
+    private void applyRuntimeFields() {
+        BotLogger.getInstance().setLogLevel(logLevel);
+        HumanProfile.getInstance().enableMicroLook = microLookEnabled;
+    }
+
+    public void save() {
+        try {
+            Files.createDirectories(CONFIG_FILE.getParent());
+            try (Writer writer = Files.newBufferedWriter(CONFIG_FILE)) {
+                GSON.toJson(this, writer);
+            }
+        } catch (Exception e) {
+            BotLogger.getInstance().logError("BotConfig: Failed to save: " + e.getMessage());
+        }
+    }
+
+    // ── Migration ─────────────────────────────────────────────────────────────
+    //
+    // To add a migration for a future breaking change:
+    //   1. Increment CURRENT_VERSION
+    //   2. Add a private static JsonObject migrateVn(JsonObject json) method
+    //   3. Call it in migrate() with the appropriate version check
+    //
+    // Each step receives the JsonObject as it currently stands and returns it
+    // modified. Steps run in order so every old version is brought forward
+    // one step at a time.
+
+    private static JsonObject migrate(JsonObject json) {
+        int version = json.has("configVersion") ? json.get("configVersion").getAsInt() : 0;
+
+        if (version < 1) json = migrateV0toV1(json);
+        if (version < 2) json = migrateV1toV2(json);
+        if (version < 3) json = migrateV2toV3(json);
+        if (version < 4) json = migrateV3toV4(json);
+
+        json.addProperty("configVersion", CURRENT_VERSION);
+        BotLogger.getInstance().logInfo("BotConfig: loaded (schema v" + version
+                + (version < CURRENT_VERSION ? " → migrated to v" + CURRENT_VERSION : "") + ")");
+        return json;
+    }
+
+    /**
+     * v0 → v1: alarm sound {@code repeatCount} (number of plays) was replaced by
+     * {@code durationSeconds} (total alarm duration in seconds).
+     * Conversion: durationSeconds ≈ repeatCount × intervalTicks / 20.
+     */
+    private static JsonObject migrateV0toV1(JsonObject json) {
+        for (String key : new String[]{"cycleCompleteSound", "stopAlertSound", "warnAlertSound"}) {
+            if (!json.has(key)) continue;
+            JsonObject sound = json.getAsJsonObject(key);
+            if (!sound.has("repeatCount")) continue;
+
+            int repeatCount   = sound.get("repeatCount").getAsInt();
+            int intervalTicks = sound.has("intervalTicks") ? sound.get("intervalTicks").getAsInt() : 20;
+            int durationSecs  = Math.max(1, (repeatCount * intervalTicks) / 20);
+
+            sound.addProperty("durationSeconds", durationSecs);
+            sound.remove("repeatCount");
+        }
+        return json;
+    }
+
+    /**
+     * v1 → v2: added autoLoadEnabled (default true) and autoLoadCrops (all default true).
+     * Old config files won't have these keys, so GSON would default booleans to false.
+     * Inject the correct defaults into the JSON before GSON parses it.
+     */
+    private static JsonObject migrateV1toV2(JsonObject json) {
+        if (!json.has("autoLoadEnabled")) {
+            json.addProperty("autoLoadEnabled", true);
+        }
+        if (!json.has("autoLoadCrops")) {
+            JsonObject crops = new JsonObject();
+            for (String crop : CropToolMapper.ALL_CROPS) {
+                crops.addProperty(crop, true);
+            }
+            json.add("autoLoadCrops", crops);
+        }
+        return json;
+    }
+
+    /**
+     * v2 → v3: added hudLines map (all rows default to visible/true).
+     * Old config files won't have this key, so GSON would default booleans to false.
+     */
+    private static JsonObject migrateV2toV3(JsonObject json) {
+        if (!json.has("hudLines")) {
+            JsonObject lines = new JsonObject();
+            for (String key : ALL_HUD_LINES) {
+                lines.addProperty(key, true);
+            }
+            json.add("hudLines", lines);
+        }
+        return json;
+    }
+
+    /**
+     * v3 → v4: added updateCheckEnabled (default true).
+     * GSON defaults missing booleans to false, so inject the correct default here.
+     */
+    private static JsonObject migrateV3toV4(JsonObject json) {
+        if (!json.has("updateCheckEnabled")) {
+            json.addProperty("updateCheckEnabled", true);
+        }
+        return json;
+    }
+
+    // ── Getters / Setters ─────────────────────────────────────────────────────
+
+    public int getMinPestCount() { return minPestCount; }
+    public void setMinPestCount(int v) { minPestCount = Math.max(1, v); save(); }
+
+    public int getLogLevel() { return logLevel; }
+    public void setLogLevel(int v) {
+        logLevel = v;
+        BotLogger.getInstance().setLogLevel(v);
+        save();
+    }
+
+    public boolean isSneakOnPathStart() { return sneakOnPathStart; }
+    public void setSneakOnPathStart(boolean v) { sneakOnPathStart = v; save(); }
+
+    public boolean isRepellentReapplyEnabled() { return repellentReapplyEnabled; }
+    public void setRepellentReapplyEnabled(boolean v) { repellentReapplyEnabled = v; save(); }
+
+    public boolean isInventoryCheckerEnabled() { return inventoryCheckerEnabled; }
+    public void setInventoryCheckerEnabled(boolean v) { inventoryCheckerEnabled = v; save(); }
+
+    public boolean isToolCheckerEnabled() { return toolCheckerEnabled; }
+    public void setToolCheckerEnabled(boolean v) { toolCheckerEnabled = v; save(); }
+
+    public boolean isYawPitchCheckerEnabled() { return yawPitchCheckerEnabled; }
+    public void setYawPitchCheckerEnabled(boolean v) { yawPitchCheckerEnabled = v; save(); }
+
+    public boolean isPestCheckerEnabled() { return pestCheckerEnabled; }
+    public void setPestCheckerEnabled(boolean v) { pestCheckerEnabled = v; save(); }
+
+    public boolean isOneCycleMode() { return oneCycleMode; }
+    public void setOneCycleMode(boolean v) { oneCycleMode = v; save(); }
+
+    public String getCycleRestartCommand() { return cycleRestartCommand; }
+    public void setCycleRestartCommand(String v) { cycleRestartCommand = v != null ? v : ""; save(); }
+
+    public AlarmSound getCycleCompleteSound() { return cycleCompleteSound; }
+    public AlarmSound getStopAlertSound()     { return stopAlertSound; }
+    public AlarmSound getWarnAlertSound()     { return warnAlertSound; }
+
+    public boolean isBypassAreaCheck() { return bypassAreaCheck; }
+    public void setBypassAreaCheck(boolean v) { bypassAreaCheck = v; save(); }
+
+    public boolean isDebugMode() { return debugMode; }
+    public void setDebugMode(boolean v) { debugMode = v; save(); }
+
+    public boolean isMicroLookEnabled() { return microLookEnabled; }
+    public void setMicroLookEnabled(boolean v) {
+        microLookEnabled = v;
+        HumanProfile.getInstance().enableMicroLook = v;
+        save();
+    }
+
+    public boolean isUpdateCheckEnabled() { return updateCheckEnabled; }
+    public void setUpdateCheckEnabled(boolean v) { updateCheckEnabled = v; save(); }
+
+    public boolean isAutoLoadEnabled() { return autoLoadEnabled; }
+    public void setAutoLoadEnabled(boolean v) { autoLoadEnabled = v; save(); }
+
+    /** Returns whether auto-load is enabled for a specific crop profile name. Defaults to true. */
+    public boolean isAutoLoadCropEnabled(String cropName) {
+        return autoLoadCrops.getOrDefault(cropName, true);
+    }
+    public void setAutoLoadCropEnabled(String cropName, boolean v) {
+        autoLoadCrops.put(cropName, v);
+        save();
+    }
+
+    /** Returns whether the named HUD row should be rendered. Defaults to true. */
+    public boolean isHudLineVisible(String key) {
+        return hudLines.getOrDefault(key, true);
+    }
+    public void setHudLineVisible(String key, boolean v) {
+        hudLines.put(key, v);
+        save();
+    }
+}
