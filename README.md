@@ -100,9 +100,6 @@ Type `/ceres` in chat to open the config screen directly.
 
 ---
 
-## AI Session Quick-Start
-
-> **Read this first if you are a new Claude Code session working in this folder.**
 
 ### What this mod is
 
