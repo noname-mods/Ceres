@@ -32,8 +32,9 @@ public class BotConfig {
      *   2 — added autoLoadEnabled + autoLoadCrops (all default true)
      *   3 — added hudLines per-row visibility map (all default true)
      *   4 — added updateCheckEnabled (default true)
+     *   5 — added rebootAlertEnabled + rebootAlertSound (default true / bell)
      */
-    private static final int CURRENT_VERSION = 4;
+    private static final int CURRENT_VERSION = 5;
 
     /** All toggleable HUD row keys, in display order. */
     public static final List<String> ALL_HUD_LINES = List.of(
@@ -69,6 +70,7 @@ public class BotConfig {
     private AlarmSound cycleCompleteSound = AlarmSound.defaultStop();
     private AlarmSound stopAlertSound     = AlarmSound.defaultStop();
     private AlarmSound warnAlertSound     = AlarmSound.defaultWarn();
+    private AlarmSound rebootAlertSound   = AlarmSound.defaultReboot();
 
     // ── Auto-load ─────────────────────────────────────────────────────────────
     private boolean autoLoadEnabled = true;
@@ -81,6 +83,9 @@ public class BotConfig {
 
     // ── Update checker ────────────────────────────────────────────────────────
     private boolean updateCheckEnabled = true;
+
+    // ── Reboot alert ──────────────────────────────────────────────────────────
+    private boolean rebootAlertEnabled = true;
 
     // ── Developer ─────────────────────────────────────────────────────────────
     private boolean bypassAreaCheck = false;
@@ -135,6 +140,14 @@ public class BotConfig {
         /** Default for warning-type alerts (yaw/pitch, pest count). */
         public static AlarmSound defaultWarn() {
             return new AlarmSound("minecraft:entity.experience_orb.pickup", 1.0, 1.5, 5, 15);
+        }
+
+        /**
+         * Default for the reboot alert — plays on a 2-second loop until the
+         * player leaves the Garden. durationSeconds is unused for this alarm.
+         */
+        public static AlarmSound defaultReboot() {
+            return new AlarmSound("minecraft:block.bell.use", 1.0, 1.0, 0, 40);
         }
 
         /** Copy values from a loaded instance, keeping defaults for any invalid/missing fields. */
@@ -196,6 +209,7 @@ public class BotConfig {
                         }
                     }
                     this.updateCheckEnabled        = loaded.updateCheckEnabled;
+                    this.rebootAlertEnabled        = loaded.rebootAlertEnabled;
                     this.bypassAreaCheck           = loaded.bypassAreaCheck;
                     this.microLookEnabled          = loaded.microLookEnabled;
                     this.debugMode                 = loaded.debugMode;
@@ -206,6 +220,8 @@ public class BotConfig {
                         this.stopAlertSound.mergeFrom(loaded.stopAlertSound, AlarmSound.defaultStop());
                     if (loaded.warnAlertSound != null)
                         this.warnAlertSound.mergeFrom(loaded.warnAlertSound, AlarmSound.defaultWarn());
+                    if (loaded.rebootAlertSound != null)
+                        this.rebootAlertSound.mergeFrom(loaded.rebootAlertSound, AlarmSound.defaultReboot());
                 }
             }
         } catch (Exception e) {
@@ -249,6 +265,7 @@ public class BotConfig {
         if (version < 2) json = migrateV1toV2(json);
         if (version < 3) json = migrateV2toV3(json);
         if (version < 4) json = migrateV3toV4(json);
+        if (version < 5) json = migrateV4toV5(json);
 
         json.addProperty("configVersion", CURRENT_VERSION);
         BotLogger.getInstance().logInfo("BotConfig: loaded (schema v" + version
@@ -322,6 +339,17 @@ public class BotConfig {
         return json;
     }
 
+    /**
+     * v4 → v5: added rebootAlertEnabled (default true).
+     * GSON defaults missing booleans to false, so inject the correct default here.
+     */
+    private static JsonObject migrateV4toV5(JsonObject json) {
+        if (!json.has("rebootAlertEnabled")) {
+            json.addProperty("rebootAlertEnabled", true);
+        }
+        return json;
+    }
+
     // ── Getters / Setters ─────────────────────────────────────────────────────
 
     public int getMinPestCount() { return minPestCount; }
@@ -377,6 +405,11 @@ public class BotConfig {
 
     public boolean isUpdateCheckEnabled() { return updateCheckEnabled; }
     public void setUpdateCheckEnabled(boolean v) { updateCheckEnabled = v; save(); }
+
+    public boolean isRebootAlertEnabled() { return rebootAlertEnabled; }
+    public void setRebootAlertEnabled(boolean v) { rebootAlertEnabled = v; save(); }
+
+    public AlarmSound getRebootAlertSound() { return rebootAlertSound; }
 
     public boolean isAutoLoadEnabled() { return autoLoadEnabled; }
     public void setAutoLoadEnabled(boolean v) { autoLoadEnabled = v; save(); }

@@ -75,7 +75,7 @@ public class CeresConfigScreen {
 
                 .option(LabelOption.createBuilder()
                     .line(Text.literal("When you press Start, Ceres checks your held tool and loads the"))
-                    .line(Text.literal("matching saved profile automatically — no manual switching needed."))
+                    .line(Text.literal("matching saved profile automatically — no manual switchingcd needed."))
                     .line(Text.literal("§7Reforged or tiered tools (e.g. \"Blessed Euclid's Wheat Hoe Mk. II\")"))
                     .line(Text.literal("§7are matched by substring, so tiers and reforges are handled."))
                     .build())
@@ -251,6 +251,38 @@ public class CeresConfigScreen {
                 .option(alarmIntervalOption("Warn Alert Interval",
                     cfg.getWarnAlertSound(), cfg))
 
+                // ── Reboot Alert ──────────────────────────────────────────────
+                .option(LabelOption.createBuilder()
+                    .line(Text.literal("§b─── Reboot Alert  §7(loops until you leave the Garden) ───────"))
+                    .build())
+
+                .option(Option.<Boolean>createBuilder()
+                    .name(Text.literal("Enable Reboot Alert"))
+                    .description(OptionDescription.of(Text.literal(
+                        "Play a repeating alarm when the server announces a scheduled reboot.\n" +
+                        "The alarm loops until you leave the Garden — warp anywhere to dismiss it.\n\n" +
+                        "Ceres watches for this server message (colour codes stripped):\n" +
+                        "§b[Important] This server will restart soon: Scheduled Reboot\n\n" +
+                        "§7There is no Duration slider for this alarm — it plays indefinitely\n" +
+                        "§7rather than for a fixed time, because the whole point is to keep\n" +
+                        "§7alerting you until you actually act on the warning.")))
+                    .binding(true, cfg::isRebootAlertEnabled, cfg::setRebootAlertEnabled)
+                    .controller(BooleanControllerBuilder::create)
+                    .build())
+
+                .option(alarmSoundIdOption("Reboot Alert Sound",
+                    AlarmSound.defaultReboot().soundId,
+                    cfg.getRebootAlertSound(), cfg))
+
+                .option(alarmVolumeOption("Reboot Alert Volume",
+                    cfg.getRebootAlertSound(), cfg))
+
+                .option(alarmPitchOption("Reboot Alert Pitch",
+                    cfg.getRebootAlertSound(), cfg))
+
+                .option(alarmIntervalOption("Reboot Alert Interval",
+                    cfg.getRebootAlertSound(), cfg))
+
                 .build())
 
             // ── Keybinds ──────────────────────────────────────────────────────
@@ -278,8 +310,12 @@ public class CeresConfigScreen {
                 .option(Option.<Boolean>createBuilder()
                     .name(Text.literal("Update Check"))
                     .description(OptionDescription.of(Text.literal(
-                        "On every world join, Ceres checks GitHub for a newer release.\n" +
-                        "If one is found, a single chat message is shown. No download occurs.\n\n" +
+                        "On every world join, Ceres contacts GitHub to check for a newer release.\n" +
+                        "If one is found, a single chat message is shown with the version and a link.\n" +
+                        "Nothing is downloaded automatically.\n\n" +
+                        "How it works: the check reads the tag of the latest GitHub release and\n" +
+                        "compares it against the installed version. The release title does not\n" +
+                        "matter — only the tag (e.g. v1.2.0 or 1.2.0) is used.\n\n" +
                         "Disable this if you are offline, on a restricted network, or\n" +
                         "simply do not want the notification.")))
                     .binding(true, cfg::isUpdateCheckEnabled, cfg::setUpdateCheckEnabled)

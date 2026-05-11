@@ -1,8 +1,8 @@
 # Ceres — Design & Reference Documentation
 
-**Version:** 1.1.0  
+**Version:** 1.1.1  
 **Minecraft:** 1.21.11 (Fabric)  
-**Depends on:** PlayerAPI 1.7.0+  
+**Depends on:** PlayerAPI 1.8.0+  
 
 ---
 

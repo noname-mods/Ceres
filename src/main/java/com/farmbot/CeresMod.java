@@ -1,5 +1,6 @@
 package com.ceres;
 
+import com.ceres.alerts.RebootAlertManager;
 import com.ceres.checkers.CheckerController;
 import com.ceres.commands.CeresCommands;
 import com.ceres.core.BotConfig;
@@ -100,6 +101,9 @@ public class CeresMod implements ClientModInitializer {
                 s.recordBlockBroken(Scheduler.getCurrentTick());
         });
 
+        PlayerAPIEvents.CHAT_RECEIVED.register((sender, message) ->
+                RebootAlertManager.getInstance().onChatReceived(sender, message));
+
         BotLogger.getInstance().logInfo("Ceres ready.");
     }
 
@@ -119,6 +123,7 @@ public class CeresMod implements ClientModInitializer {
 
         CeresTabListReader.update();
         PestRepellentManager.getInstance().tick(currentTick);
+        RebootAlertManager.getInstance().tick();
 
         BotStateManager state = BotStateManager.getInstance();
         BotState botState = state.getCurrentState();
