@@ -75,7 +75,7 @@ public class CeresConfigScreen {
 
                 .option(LabelOption.createBuilder()
                     .line(Text.literal("When you press Start, Ceres checks your held tool and loads the"))
-                    .line(Text.literal("matching saved profile automatically — no manual switchingcd needed."))
+                    .line(Text.literal("matching saved profile automatically — no manual switching needed."))
                     .line(Text.literal("§7Reforged or tiered tools (e.g. \"Blessed Euclid's Wheat Hoe Mk. II\")"))
                     .line(Text.literal("§7are matched by substring, so tiers and reforges are handled."))
                     .build())
@@ -153,7 +153,9 @@ public class CeresConfigScreen {
                 .option(Option.<Boolean>createBuilder()
                     .name(Text.literal("Tool Checker"))
                     .description(OptionDescription.of(Text.literal(
-                        "Stop the bot if the held item changes unexpectedly.")))
+                        "Warn if the held item changes from the one the bot started with.\n" +
+                        "The bot continues running — most item switches are harmless\n" +
+                        "(e.g. other mods, reforging). Disable if you get false positives.")))
                     .binding(true, cfg::isToolCheckerEnabled, cfg::setToolCheckerEnabled)
                     .controller(BooleanControllerBuilder::create)
                     .build())

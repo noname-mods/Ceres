@@ -7,7 +7,10 @@ public class PestChecker {
 
     private long lastAlertTick = -600;
 
-    public void reset() {}
+    public void reset() {
+        // No per-cycle state to reset — lastAlertTick persists intentionally across
+        // resets so the pest alarm cannot fire more often than once per 30 seconds.
+    }
 
     public boolean check(long currentTick) {
         int pestCount = BotStateManager.getInstance().getPestCount();

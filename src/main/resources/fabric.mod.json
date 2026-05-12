@@ -11,7 +11,7 @@
   "license": "LGPL-3",
   "icon": "assets/ceres/icon.png",
   "environment": "client",
-  "mixins": ["farmbot.mixins.json"],
+  "mixins": ["ceres.mixins.json"],
   "entrypoints": {
     "client": ["com.ceres.CeresMod"],
     "modmenu": ["com.ceres.modmenu.CeresModMenuPlugin"]

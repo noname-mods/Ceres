@@ -8,12 +8,12 @@ import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.text.Text;
 
 /**
- * Configuration screen accessible from:
- *  - ModMenu "Config" button
- *  - /bot config command
+ * Legacy configuration screen — no longer reachable in normal play.
  *
- * Allows editing: minPestCount, logLevel, sprintEnabled, repellentReapplyEnabled.
- * Changes are saved automatically when the screen is closed.
+ * The current configuration UI is {@link CeresConfigScreen} (YACL-based),
+ * opened via /ceres, the "Open Config" keybind, or the ModMenu "Config" button.
+ *
+ * Retained as a reference; do not add new settings here.
  */
 public class BotConfigScreen extends Screen {
 

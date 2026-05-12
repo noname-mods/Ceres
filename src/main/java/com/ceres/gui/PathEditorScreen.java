@@ -30,7 +30,7 @@ import java.util.Map;
  *   ─────────────────────────────────────────────────────────────
  *                [Done]                               [+ Add Here]
  *
- * Profiles are saved to config/farmbot/profiles/<name>.json.
+ * Profiles are saved to config/ceres/profiles/<name>.json.
  * Done always commits editPaths/editSprint to paths.json (unchanged behaviour).
  */
 public class PathEditorScreen extends Screen {

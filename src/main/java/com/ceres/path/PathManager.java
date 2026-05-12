@@ -73,11 +73,8 @@ public class PathManager {
 
         double playerX = PlayerInfo.getX();
         double playerZ = PlayerInfo.getZ();
-        float playerYaw = PlayerInfo.getYaw();
 
         Waypoint target = path.get(idx);
-        double deltaX = target.x - playerX;
-        double deltaZ = target.z - playerZ;
 
         if (PathUtils.hasReachedTarget(playerX, playerZ, target.x, target.z, 0.5)) {
             for (String key : List.of("forward", "back", "left", "right", "sprint", "sneak", "jump")) {
@@ -88,11 +85,11 @@ public class PathManager {
             return;
         }
 
-        moveTowardsPoint(target, deltaX, deltaZ, playerYaw);
+        moveTowardsPoint(target);
         attemptMessUp();
     }
 
-    private void moveTowardsPoint(Waypoint target, double deltaX, double deltaZ, float yaw) {
+    private void moveTowardsPoint(Waypoint target) {
         List<String> keysToPress;
 
         if (target.hasForcedKeys()) {
@@ -170,12 +167,4 @@ public class PathManager {
         }
     }
 
-    public void stopPathFollowing() {
-        BotStateManager state = BotStateManager.getInstance();
-        state.setIsFollowingPath(false);
-        state.setCurrentPathIndex(0);
-        state.setCurrentPath(null);
-        messUpTimer = 0;
-        MovementActions.releaseAll();
-    }
 }

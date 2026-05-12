@@ -96,8 +96,4 @@ public class CheckerController {
         }
     }
 
-    public void forceReset(long currentTick) {
-        resetAll(currentTick);
-        nextResetTick = currentTick + 60 + (long)(Math.random() * 40);
-    }
 }
