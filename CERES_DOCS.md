@@ -6,10 +6,6 @@
 
 ---
 
-## AI Session Quick-Start
-
-> **Read this first if you are a new Claude Code session working in this folder.**
-
 ### What this mod is
 
 Ceres is a **client-side farming automation bot** for Hypixel Skyblock. It moves the player along a pre-recorded waypoint path, holds the attack key to break crops, auto-uses Pest Repellent, monitors safety conditions, and displays a live HUD. It is built entirely on top of PlayerAPI and never imports Minecraft internals directly.
