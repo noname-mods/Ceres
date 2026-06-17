@@ -6,11 +6,11 @@ import com.ceres.core.BotState;
 import com.ceres.core.BotStateManager;
 import com.ceres.path.PathType;
 import com.ceres.path.Waypoint;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.render.RenderTickCounter;
+import net.minecraft.client.DeltaTracker;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.player.LocalPlayer;
 
 import java.util.List;
 
@@ -37,16 +37,16 @@ public class BotHudRenderer {
 
     private BotHudRenderer() {}
 
-    public static void render(DrawContext ctx, RenderTickCounter tick) {
+    public static void render(GuiGraphicsExtractor ctx, DeltaTracker tick) {
         BotStateManager state = BotStateManager.getInstance();
         if (!state.isGuiVisible()) return;
 
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
 
-        TextRenderer tr     = client.textRenderer;
-        ClientPlayerEntity p = client.player;
-        BotState botState   = state.getCurrentState();
+        Font tr         = client.font;
+        LocalPlayer p   = client.player;
+        BotState botState = state.getCurrentState();
 
         int stateCol = switch (botState) {
             case RUNNING -> 0xFF44EE44;
@@ -97,9 +97,9 @@ public class BotHudRenderer {
         fill(ctx, PX+ACCENT, PY,        PW-ACCENT, HEADER, HEADER_TINT);
         fill(ctx, PX+ACCENT, PY+HEADER, PW-ACCENT, 1, DIVIDER);
 
-        ctx.drawText(tr, "Ceres", PX + LX_OFF, PY + 3, 0xFFAAAAAA, false);
+        ctx.text(tr, "Ceres", PX + LX_OFF, PY + 3, 0xFFAAAAAA, false);
         String sn = botState.name();
-        ctx.drawText(tr, sn, PX + PW - tr.getWidth(sn) - 5, PY + 3, stateCol, false);
+        ctx.text(tr, sn, PX + PW - tr.width(sn) - 5, PY + 3, stateCol, false);
 
         int y = PY + HEADER + 1 + PAD;
         int lx = PX + LX_OFF;
@@ -124,7 +124,7 @@ public class BotHudRenderer {
 
         if (cfg.isHudLineVisible("look")) {
             String look = String.format("Y %.1f  P %.1f",
-                    net.minecraft.util.math.MathHelper.wrapDegrees(p.getYaw()), p.getPitch());
+                    net.minecraft.util.Mth.wrapDegrees(p.getYRot()), p.getXRot());
             kv(ctx, tr, lx, vx, y, "Look", look, VALUE_COL);
             y += LINE;
         }
@@ -215,7 +215,7 @@ public class BotHudRenderer {
             fill(ctx, PX,        logY, ACCENT, logH, 0x88888888);
             fill(ctx, PX+ACCENT, logY, LOG_PW-ACCENT, HEADER, 0x10FFFFFF);
             fill(ctx, PX+ACCENT, logY+HEADER, LOG_PW-ACCENT, 1, 0x20FFFFFF);
-            ctx.drawText(tr, "LOG", PX + LX_OFF, logY + 3, 0xFF555555, false);
+            ctx.text(tr, "LOG", PX + LX_OFF, logY + 3, 0xFF555555, false);
 
             int ly = logY + HEADER + 1 + 2;
             for (int i = start; i < logs.size(); i++) {
@@ -223,18 +223,18 @@ public class BotHudRenderer {
                 int msgStart = line.indexOf("] ");
                 if (msgStart >= 0) line = line.substring(msgStart + 2);
                 if (line.length() > 52) line = line.substring(0, 52) + "…";
-                ctx.drawText(tr, line, PX + LX_OFF, ly, 0xFF999999, false);
+                ctx.text(tr, line, PX + LX_OFF, ly, 0xFF999999, false);
                 ly += 9;
             }
         }
 
-        int hw = client.getWindow().getScaledWidth();
-        int hh = client.getWindow().getScaledHeight();
+        int hw = client.getWindow().getGuiScaledWidth();
+        int hh = client.getWindow().getGuiScaledHeight();
         String[] hints = { "O=Primary  U=Secondary", "P=Pause  J=Resume  K=Stop", "I=Paths  ;=Toggle HUD" };
         int hintLineH = 10;
         int hintPad   = 4;
         int hintW     = 0;
-        for (String h : hints) hintW = Math.max(hintW, tr.getWidth(h));
+        for (String h : hints) hintW = Math.max(hintW, tr.width(h));
         int hintPanelW = hintW + hintPad * 2;
         int hintPanelH = hints.length * hintLineH + hintPad * 2 - 1;
         int hbx = hw - hintPanelW - 4;
@@ -243,20 +243,20 @@ public class BotHudRenderer {
         fill(ctx, hbx, hby, ACCENT, hintPanelH, 0x88666666);
         int hy = hby + hintPad;
         for (String h : hints) {
-            ctx.drawText(tr, h, hbx + hintPad + ACCENT, hy, HINT_COL, false);
+            ctx.text(tr, h, hbx + hintPad + ACCENT, hy, HINT_COL, false);
             hy += hintLineH;
         }
     }
 
-    private static void fill(DrawContext ctx, int x, int y, int w, int h, int color) {
+    private static void fill(GuiGraphicsExtractor ctx, int x, int y, int w, int h, int color) {
         ctx.fill(x, y, x + w, y + h, color);
     }
 
-    private static void kv(DrawContext ctx, TextRenderer tr,
+    private static void kv(GuiGraphicsExtractor ctx, Font tr,
                             int lx, int vx, int y,
                             String label, String value, int valueCol) {
-        ctx.drawText(tr, label, lx, y, LABEL_COL, false);
-        ctx.drawText(tr, value, vx, y, valueCol, false);
+        ctx.text(tr, label, lx, y, LABEL_COL, false);
+        ctx.text(tr, value, vx, y, valueCol, false);
     }
 
     /**

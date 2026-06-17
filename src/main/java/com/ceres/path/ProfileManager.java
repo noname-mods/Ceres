@@ -153,7 +153,7 @@ public class ProfileManager {
     public void openProfilesFolder() {
         try {
             ensureDir();
-            Util.getOperatingSystem().open(PROFILES_DIR.toUri());
+            Util.getPlatform().openPath(PROFILES_DIR);
         } catch (Exception e) {
             BotLogger.getInstance().logError("ProfileManager: openProfilesFolder failed: " + e.getMessage());
         }

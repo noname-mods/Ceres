@@ -4,6 +4,14 @@
 
 ---
 
+## [1.1.2] - 2026-06-17
+### Changed
+- Update checker moved to PlayerAPI's shared `UpdateChecker` (requires PlayerAPI 1.12.0+). Adds a
+  click-to-hide link on the notification and a distinct message when the latest release targets a
+  different Minecraft version (release tags use `<modVersion>+<mcVersion>`, e.g. `1.2.0+26.1.2`).
+
+---
+
 ## [1.1.1] - 2026-05-11
 ### Added
 - `RebootAlertManager` — detects the Hypixel scheduled reboot chat message and plays a persistent alarm sound until the player leaves the Garden (warp anywhere to dismiss)

@@ -6,9 +6,9 @@ import com.ceres.core.BotLogger;
 import com.ceres.path.CropToolMapper;
 import dev.isxander.yacl3.api.*;
 import dev.isxander.yacl3.api.controller.*;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 
 import java.util.List;
 
@@ -24,32 +24,32 @@ public class CeresConfigScreen {
         BotConfig cfg = BotConfig.getInstance();
 
         return YetAnotherConfigLib.createBuilder()
-            .title(Text.literal("Ceres Configuration"))
+            .title(Component.literal("Ceres Configuration"))
 
             // ── Bot Settings ──────────────────────────────────────────────────
             .category(ConfigCategory.createBuilder()
-                .name(Text.literal("Bot Settings"))
-                .tooltip(Text.literal("General bot behaviour settings."))
+                .name(Component.literal("Bot Settings"))
+                .tooltip(Component.literal("General bot behaviour settings."))
 
                 .option(Option.<Boolean>createBuilder()
-                    .name(Text.literal("Sneak on Path Start"))
-                    .description(OptionDescription.of(Text.literal(
+                    .name(Component.literal("Sneak on Path Start"))
+                    .description(OptionDescription.of(Component.literal(
                         "Briefly sneak when starting a path run to snap orientation before moving.")))
                     .binding(true, cfg::isSneakOnPathStart, cfg::setSneakOnPathStart)
                     .controller(BooleanControllerBuilder::create)
                     .build())
 
                 .option(Option.<Boolean>createBuilder()
-                    .name(Text.literal("Pest Repellent Reapply"))
-                    .description(OptionDescription.of(Text.literal(
+                    .name(Component.literal("Pest Repellent Reapply"))
+                    .description(OptionDescription.of(Component.literal(
                         "Automatically pause and reapply pest repellent when the timer expires.")))
                     .binding(true, cfg::isRepellentReapplyEnabled, cfg::setRepellentReapplyEnabled)
                     .controller(BooleanControllerBuilder::create)
                     .build())
 
                 .option(Option.<Boolean>createBuilder()
-                    .name(Text.literal("One Cycle Mode"))
-                    .description(OptionDescription.of(Text.literal(
+                    .name(Component.literal("One Cycle Mode"))
+                    .description(OptionDescription.of(Component.literal(
                         "When enabled, the bot completes one full path cycle then plays an alert and stops " +
                         "instead of looping. Useful for single-pass tasks or scheduled restarts.")))
                     .binding(false, cfg::isOneCycleMode, cfg::setOneCycleMode)
@@ -57,8 +57,8 @@ public class CeresConfigScreen {
                     .build())
 
                 .option(Option.<String>createBuilder()
-                    .name(Text.literal("Cycle Start Command"))
-                    .description(OptionDescription.of(Text.literal(
+                    .name(Component.literal("Cycle Start Command"))
+                    .description(OptionDescription.of(Component.literal(
                         "Command sent at the start of every cycle (including the first) to reposition " +
                         "the player before the path begins. In One Cycle Mode it fires once at the " +
                         "start only. Leave blank to disable. Do not include the leading /.")))
@@ -70,19 +70,19 @@ public class CeresConfigScreen {
 
             // ── Auto-Load ─────────────────────────────────────────────────────
             .category(ConfigCategory.createBuilder()
-                .name(Text.literal("Auto-Load"))
-                .tooltip(Text.literal("Automatically load a saved profile based on the tool you are holding when the bot starts."))
+                .name(Component.literal("Auto-Load"))
+                .tooltip(Component.literal("Automatically load a saved profile based on the tool you are holding when the bot starts."))
 
                 .option(LabelOption.createBuilder()
-                    .line(Text.literal("When you press Start, Ceres checks your held tool and loads the"))
-                    .line(Text.literal("matching saved profile automatically — no manual switching needed."))
-                    .line(Text.literal("§7Reforged or tiered tools (e.g. \"Blessed Euclid's Wheat Hoe Mk. II\")"))
-                    .line(Text.literal("§7are matched by substring, so tiers and reforges are handled."))
+                    .line(Component.literal("When you press Start, Ceres checks your held tool and loads the"))
+                    .line(Component.literal("matching saved profile automatically — no manual switching needed."))
+                    .line(Component.literal("§7Reforged or tiered tools (e.g. \"Blessed Euclid's Wheat Hoe Mk. II\")"))
+                    .line(Component.literal("§7are matched by substring, so tiers and reforges are handled."))
                     .build())
 
                 .option(Option.<Boolean>createBuilder()
-                    .name(Text.literal("Enable Auto-Load"))
-                    .description(OptionDescription.of(Text.literal(
+                    .name(Component.literal("Enable Auto-Load"))
+                    .description(OptionDescription.of(Component.literal(
                         "Master toggle. When off, no profile is auto-loaded on start " +
                         "regardless of the per-crop settings below.")))
                     .binding(true, cfg::isAutoLoadEnabled, cfg::setAutoLoadEnabled)
@@ -90,7 +90,7 @@ public class CeresConfigScreen {
                     .build())
 
                 .option(LabelOption.createBuilder()
-                    .line(Text.literal("§8─── Per-crop toggles (require Enable Auto-Load above) ───────"))
+                    .line(Component.literal("§8─── Per-crop toggles (require Enable Auto-Load above) ───────"))
                     .build())
 
                 .options(CropToolMapper.ALL_CROPS.stream()
@@ -101,13 +101,13 @@ public class CeresConfigScreen {
 
             // ── HUD Lines ─────────────────────────────────────────────────────
             .category(ConfigCategory.createBuilder()
-                .name(Text.literal("HUD Lines"))
-                .tooltip(Text.literal("Toggle individual rows in the Ceres HUD to reduce clutter."))
+                .name(Component.literal("HUD Lines"))
+                .tooltip(Component.literal("Toggle individual rows in the Ceres HUD to reduce clutter."))
 
                 .option(LabelOption.createBuilder()
-                    .line(Text.literal("Show or hide each row in the overlay. Tab-list rows"))
-                    .line(Text.literal("(Plots, Spray, etc.) are also hidden when the server"))
-                    .line(Text.literal("isn't sending that data, regardless of this setting."))
+                    .line(Component.literal("Show or hide each row in the overlay. Tab-list rows"))
+                    .line(Component.literal("(Plots, Spray, etc.) are also hidden when the server"))
+                    .line(Component.literal("isn't sending that data, regardless of this setting."))
                     .build())
 
                 .option(hudLineOption("profile",    "Profile",    "The name of the currently loaded path profile.", cfg))
@@ -129,12 +129,12 @@ public class CeresConfigScreen {
 
             // ── Checkers ──────────────────────────────────────────────────────
             .category(ConfigCategory.createBuilder()
-                .name(Text.literal("Checkers"))
-                .tooltip(Text.literal("Safety check toggles and thresholds."))
+                .name(Component.literal("Checkers"))
+                .tooltip(Component.literal("Safety check toggles and thresholds."))
 
                 .option(Option.<Integer>createBuilder()
-                    .name(Text.literal("Min Pest Count for Alarm"))
-                    .description(OptionDescription.of(Text.literal(
+                    .name(Component.literal("Min Pest Count for Alarm"))
+                    .description(OptionDescription.of(Component.literal(
                         "Trigger the pest alarm when the tab-list pest count reaches this number.")))
                     .binding(4, cfg::getMinPestCount, cfg::setMinPestCount)
                     .controller(opt -> IntegerSliderControllerBuilder.create(opt)
@@ -143,16 +143,16 @@ public class CeresConfigScreen {
                     .build())
 
                 .option(Option.<Boolean>createBuilder()
-                    .name(Text.literal("Inventory Checker"))
-                    .description(OptionDescription.of(Text.literal(
+                    .name(Component.literal("Inventory Checker"))
+                    .description(OptionDescription.of(Component.literal(
                         "Stop the bot if the hotbar hasn't changed for 6 seconds (stuck detector).")))
                     .binding(true, cfg::isInventoryCheckerEnabled, cfg::setInventoryCheckerEnabled)
                     .controller(BooleanControllerBuilder::create)
                     .build())
 
                 .option(Option.<Boolean>createBuilder()
-                    .name(Text.literal("Tool Checker"))
-                    .description(OptionDescription.of(Text.literal(
+                    .name(Component.literal("Tool Checker"))
+                    .description(OptionDescription.of(Component.literal(
                         "Warn if the held item changes from the one the bot started with.\n" +
                         "The bot continues running — most item switches are harmless\n" +
                         "(e.g. other mods, reforging). Disable if you get false positives.")))
@@ -161,16 +161,16 @@ public class CeresConfigScreen {
                     .build())
 
                 .option(Option.<Boolean>createBuilder()
-                    .name(Text.literal("Yaw / Pitch Checker"))
-                    .description(OptionDescription.of(Text.literal(
+                    .name(Component.literal("Yaw / Pitch Checker"))
+                    .description(OptionDescription.of(Component.literal(
                         "Alert if the player's rotation drifts more than 1 degree.")))
                     .binding(true, cfg::isYawPitchCheckerEnabled, cfg::setYawPitchCheckerEnabled)
                     .controller(BooleanControllerBuilder::create)
                     .build())
 
                 .option(Option.<Boolean>createBuilder()
-                    .name(Text.literal("Pest Checker"))
-                    .description(OptionDescription.of(Text.literal(
+                    .name(Component.literal("Pest Checker"))
+                    .description(OptionDescription.of(Component.literal(
                         "Trigger the pest alarm when the pest count reaches the minimum.")))
                     .binding(true, cfg::isPestCheckerEnabled, cfg::setPestCheckerEnabled)
                     .controller(BooleanControllerBuilder::create)
@@ -180,19 +180,19 @@ public class CeresConfigScreen {
 
             // ── Sounds ────────────────────────────────────────────────────────
             .category(ConfigCategory.createBuilder()
-                .name(Text.literal("Sounds"))
-                .tooltip(Text.literal("Customise alert sounds, pitch, volume and repeat behaviour."))
+                .name(Component.literal("Sounds"))
+                .tooltip(Component.literal("Customise alert sounds, pitch, volume and repeat behaviour."))
 
                 .option(LabelOption.createBuilder()
-                    .line(Text.literal("Sound IDs use the format §esound.category.name§r"))
-                    .line(Text.literal("e.g. §eentity.player.levelup§r  or  §eblock.note_block.pling"))
-                    .line(Text.literal("Browse all vanilla sounds at: §ehttps://misode.github.io/sounds/"))
-                    .line(Text.literal("§7Namespace is always minecraft: for vanilla — omit it here."))
+                    .line(Component.literal("Sound IDs use the format §esound.category.name§r"))
+                    .line(Component.literal("e.g. §eentity.player.levelup§r  or  §eblock.note_block.pling"))
+                    .line(Component.literal("Browse all vanilla sounds at: §ehttps://misode.github.io/sounds/"))
+                    .line(Component.literal("§7Namespace is always minecraft: for vanilla — omit it here."))
                     .build())
 
                 // ── Cycle Complete (One-Cycle Mode) ───────────────────────────
                 .option(LabelOption.createBuilder()
-                    .line(Text.literal("§6─── Cycle Complete  §7(plays when One Cycle Mode finishes) ───"))
+                    .line(Component.literal("§6─── Cycle Complete  §7(plays when One Cycle Mode finishes) ───"))
                     .build())
 
                 .option(alarmSoundIdOption("Cycle Complete Sound",
@@ -213,7 +213,7 @@ public class CeresConfigScreen {
 
                 // ── Stop Alert (checker hard-stops) ───────────────────────────
                 .option(LabelOption.createBuilder()
-                    .line(Text.literal("§c─── Stop Alert  §7(inventory checker, tool checker) ──────────"))
+                    .line(Component.literal("§c─── Stop Alert  §7(inventory checker, tool checker) ──────────"))
                     .build())
 
                 .option(alarmSoundIdOption("Stop Alert Sound",
@@ -234,7 +234,7 @@ public class CeresConfigScreen {
 
                 // ── Warn Alert (non-stop alerts) ──────────────────────────────
                 .option(LabelOption.createBuilder()
-                    .line(Text.literal("§e─── Warn Alert  §7(yaw/pitch checker, pest alert) ───────────"))
+                    .line(Component.literal("§e─── Warn Alert  §7(yaw/pitch checker, pest alert) ───────────"))
                     .build())
 
                 .option(alarmSoundIdOption("Warn Alert Sound",
@@ -255,12 +255,12 @@ public class CeresConfigScreen {
 
                 // ── Reboot Alert ──────────────────────────────────────────────
                 .option(LabelOption.createBuilder()
-                    .line(Text.literal("§b─── Reboot Alert  §7(loops until you leave the Garden) ───────"))
+                    .line(Component.literal("§b─── Reboot Alert  §7(loops until you leave the Garden) ───────"))
                     .build())
 
                 .option(Option.<Boolean>createBuilder()
-                    .name(Text.literal("Enable Reboot Alert"))
-                    .description(OptionDescription.of(Text.literal(
+                    .name(Component.literal("Enable Reboot Alert"))
+                    .description(OptionDescription.of(Component.literal(
                         "Play a repeating alarm when the server announces a scheduled reboot.\n" +
                         "The alarm loops until you leave the Garden — warp anywhere to dismiss it.\n\n" +
                         "Ceres watches for this server message (colour codes stripped):\n" +
@@ -289,29 +289,29 @@ public class CeresConfigScreen {
 
             // ── Keybinds ──────────────────────────────────────────────────────
             .category(ConfigCategory.createBuilder()
-                .name(Text.literal("Keybinds"))
-                .tooltip(Text.literal("Remap keybinds in Options → Controls → Key Binds under \"Ceres\"."))
+                .name(Component.literal("Keybinds"))
+                .tooltip(Component.literal("Remap keybinds in Options → Controls → Key Binds under \"Ceres\"."))
 
                 .option(LabelOption.createBuilder()
-                    .line(Text.literal("All Ceres keybinds can be rebound (including to NONE via Escape)"))
-                    .line(Text.literal("in §eOptions → Controls → Key Binds §r→ \"Ceres\" category."))
-                    .line(Text.literal(" "))
-                    .line(Text.literal("Default bindings:"))
-                    .line(Text.literal("  §e;§r  Toggle HUD        §e I §r  Open Path Editor"))
-                    .line(Text.literal("  §eO§r  Start Primary     §e U §r  Start Secondary"))
-                    .line(Text.literal("  §eP§r  Pause   §e J §r  Resume   §e K §r  Stop"))
+                    .line(Component.literal("All Ceres keybinds can be rebound (including to NONE via Escape)"))
+                    .line(Component.literal("in §eOptions → Controls → Key Binds §r→ \"Ceres\" category."))
+                    .line(Component.literal(" "))
+                    .line(Component.literal("Default bindings:"))
+                    .line(Component.literal("  §e;§r  Toggle HUD        §e I §r  Open Path Editor"))
+                    .line(Component.literal("  §eO§r  Start Primary     §e U §r  Start Secondary"))
+                    .line(Component.literal("  §eP§r  Pause   §e J §r  Resume   §e K §r  Stop"))
                     .build())
 
                 .build())
 
             // ── Updates ───────────────────────────────────────────────────────
             .category(ConfigCategory.createBuilder()
-                .name(Text.literal("Updates"))
-                .tooltip(Text.literal("GitHub release update notifications."))
+                .name(Component.literal("Updates"))
+                .tooltip(Component.literal("GitHub release update notifications."))
 
                 .option(Option.<Boolean>createBuilder()
-                    .name(Text.literal("Update Check"))
-                    .description(OptionDescription.of(Text.literal(
+                    .name(Component.literal("Update Check"))
+                    .description(OptionDescription.of(Component.literal(
                         "On every world join, Ceres contacts GitHub to check for a newer release.\n" +
                         "If one is found, a single chat message is shown with the version and a link.\n" +
                         "Nothing is downloaded automatically.\n\n" +
@@ -328,17 +328,17 @@ public class CeresConfigScreen {
 
             // ── Developer ─────────────────────────────────────────────────────
             .category(ConfigCategory.createBuilder()
-                .name(Text.literal("Developer").formatted(Formatting.RED))
-                .tooltip(Text.literal("Testing options — do not use during normal operation."))
+                .name(Component.literal("Developer").withStyle(ChatFormatting.RED))
+                .tooltip(Component.literal("Testing options — do not use during normal operation."))
 
                 .option(LabelOption.createBuilder()
-                    .line(Text.literal("§c⚠ These settings may break things or cause unintended behaviour."))
-                    .line(Text.literal("§7Only change these if you know what you are doing."))
+                    .line(Component.literal("§c⚠ These settings may break things or cause unintended behaviour."))
+                    .line(Component.literal("§7Only change these if you know what you are doing."))
                     .build())
 
                 .option(Option.<Boolean>createBuilder()
-                    .name(Text.literal("Debug Mode"))
-                    .description(OptionDescription.of(Text.literal(
+                    .name(Component.literal("Debug Mode"))
+                    .description(OptionDescription.of(Component.literal(
                         "Prints diagnostic messages to chat and the log file.\n" +
                         "Useful for diagnosing why /ceres may not open on some servers:\n" +
                         "green message = ClientCommandManager fired normally;\n" +
@@ -348,24 +348,24 @@ public class CeresConfigScreen {
                     .build())
 
                 .option(Option.<Boolean>createBuilder()
-                    .name(Text.literal("Bypass Area Check"))
-                    .description(OptionDescription.of(Text.literal(
+                    .name(Component.literal("Bypass Area Check"))
+                    .description(OptionDescription.of(Component.literal(
                         "Allow the bot to start outside expected areas. Useful for testing paths.")))
                     .binding(false, cfg::isBypassAreaCheck, cfg::setBypassAreaCheck)
                     .controller(BooleanControllerBuilder::create)
                     .build())
 
                 .option(Option.<Boolean>createBuilder()
-                    .name(Text.literal("Micro-Look Jitter"))
-                    .description(OptionDescription.of(Text.literal(
+                    .name(Component.literal("Micro-Look Jitter"))
+                    .description(OptionDescription.of(Component.literal(
                         "Enable subtle random camera movements (HumanProfile). Off by default.")))
                     .binding(false, cfg::isMicroLookEnabled, cfg::setMicroLookEnabled)
                     .controller(BooleanControllerBuilder::create)
                     .build())
 
                 .option(Option.<Integer>createBuilder()
-                    .name(Text.literal("Log Level"))
-                    .description(OptionDescription.of(Text.literal(
+                    .name(Component.literal("Log Level"))
+                    .description(OptionDescription.of(Component.literal(
                         "DEBUG = most verbose. ERROR = errors only.")))
                     .binding(BotLogger.LEVEL_WARN, cfg::getLogLevel, cfg::setLogLevel)
                     .controller(opt -> CyclingListControllerBuilder.create(opt)
@@ -375,10 +375,10 @@ public class CeresConfigScreen {
                             BotLogger.LEVEL_WARN,
                             BotLogger.LEVEL_ERROR))
                         .valueFormatter(v -> switch (v) {
-                            case BotLogger.LEVEL_DEBUG -> Text.literal("DEBUG");
-                            case BotLogger.LEVEL_INFO  -> Text.literal("INFO");
-                            case BotLogger.LEVEL_WARN  -> Text.literal("WARN");
-                            default                    -> Text.literal("ERROR");
+                            case BotLogger.LEVEL_DEBUG -> Component.literal("DEBUG");
+                            case BotLogger.LEVEL_INFO  -> Component.literal("INFO");
+                            case BotLogger.LEVEL_WARN  -> Component.literal("WARN");
+                            default                    -> Component.literal("ERROR");
                         }))
                     .build())
 
@@ -393,8 +393,8 @@ public class CeresConfigScreen {
 
     private static Option<Boolean> hudLineOption(String key, String label, String description, BotConfig cfg) {
         return Option.<Boolean>createBuilder()
-            .name(Text.literal(label))
-            .description(OptionDescription.of(Text.literal(description)))
+            .name(Component.literal(label))
+            .description(OptionDescription.of(Component.literal(description)))
             .binding(true, () -> cfg.isHudLineVisible(key), v -> cfg.setHudLineVisible(key, v))
             .controller(BooleanControllerBuilder::create)
             .build();
@@ -404,8 +404,8 @@ public class CeresConfigScreen {
 
     private static Option<Boolean> autoLoadCropOption(String cropName, BotConfig cfg) {
         return Option.<Boolean>createBuilder()
-            .name(Text.literal(cropName))
-            .description(OptionDescription.of(Text.literal(
+            .name(Component.literal(cropName))
+            .description(OptionDescription.of(Component.literal(
                 "When enabled, holding the matching tool will auto-load the \"" + cropName +
                 "\" profile on bot start.\nRequires the \"Enable Auto-Load\" master toggle to be on.")))
             .binding(true, () -> cfg.isAutoLoadCropEnabled(cropName),
@@ -419,8 +419,8 @@ public class CeresConfigScreen {
     private static Option<String> alarmSoundIdOption(String name, String defaultId,
                                                       AlarmSound sound, BotConfig cfg) {
         return Option.<String>createBuilder()
-            .name(Text.literal(name))
-            .description(OptionDescription.of(Text.literal(
+            .name(Component.literal(name))
+            .description(OptionDescription.of(Component.literal(
                 "Minecraft sound ID. Omit the 'minecraft:' prefix for vanilla sounds.\n" +
                 "Example: entity.player.levelup\n" +
                 "Browse all sounds at: https://misode.github.io/sounds/")))
@@ -431,8 +431,8 @@ public class CeresConfigScreen {
 
     private static Option<Double> alarmVolumeOption(String name, AlarmSound sound, BotConfig cfg) {
         return Option.<Double>createBuilder()
-            .name(Text.literal(name))
-            .description(OptionDescription.of(Text.literal("Volume: 0.1 = very quiet, 1.0 = normal, 2.0 = loud.")))
+            .name(Component.literal(name))
+            .description(OptionDescription.of(Component.literal("Volume: 0.1 = very quiet, 1.0 = normal, 2.0 = loud.")))
             .binding(1.0, () -> sound.volume, v -> { sound.volume = v; cfg.save(); })
             .controller(opt -> DoubleSliderControllerBuilder.create(opt).range(0.1, 2.0).step(0.05))
             .build();
@@ -440,8 +440,8 @@ public class CeresConfigScreen {
 
     private static Option<Double> alarmPitchOption(String name, AlarmSound sound, BotConfig cfg) {
         return Option.<Double>createBuilder()
-            .name(Text.literal(name))
-            .description(OptionDescription.of(Text.literal(
+            .name(Component.literal(name))
+            .description(OptionDescription.of(Component.literal(
                 "Pitch: 0.5 = low and slow, 1.0 = normal, 2.0 = high and fast.")))
             .binding(1.0, () -> sound.pitch, v -> { sound.pitch = v; cfg.save(); })
             .controller(opt -> DoubleSliderControllerBuilder.create(opt).range(0.5, 2.0).step(0.05))
@@ -450,19 +450,19 @@ public class CeresConfigScreen {
 
     private static Option<Integer> alarmRepeatOption(String name, AlarmSound sound, BotConfig cfg) {
         return Option.<Integer>createBuilder()
-            .name(Text.literal(name))
-            .description(OptionDescription.of(Text.literal(
+            .name(Component.literal(name))
+            .description(OptionDescription.of(Component.literal(
                 "How long the alarm plays in total. Set to 0 to play once with no repeats.")))
             .binding(10, () -> sound.durationSeconds, v -> { sound.durationSeconds = v; cfg.save(); })
             .controller(opt -> IntegerSliderControllerBuilder.create(opt).range(0, 30).step(1)
-                .valueFormatter(v -> Text.literal(v + "s")))
+                .valueFormatter(v -> Component.literal(v + "s")))
             .build();
     }
 
     private static Option<Integer> alarmIntervalOption(String name, AlarmSound sound, BotConfig cfg) {
         return Option.<Integer>createBuilder()
-            .name(Text.literal(name))
-            .description(OptionDescription.of(Text.literal(
+            .name(Component.literal(name))
+            .description(OptionDescription.of(Component.literal(
                 "Ticks between each repeat. 20 ticks = 1 second.")))
             .binding(20, () -> sound.intervalTicks, v -> { sound.intervalTicks = v; cfg.save(); })
             .controller(opt -> IntegerSliderControllerBuilder.create(opt).range(5, 60).step(5))

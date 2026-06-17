@@ -1,8 +1,8 @@
 # Ceres — Design & Reference Documentation
 
-**Version:** 1.1.1  
-**Minecraft:** 1.21.11 (Fabric)  
-**Depends on:** PlayerAPI 1.8.0+  
+**Version:** 1.1.2  
+**Minecraft:** 26.1.2 (Fabric)  
+**Depends on:** PlayerAPI 1.12.0+  
 
 ---
 
@@ -18,7 +18,7 @@ Ceres is a **client-side farming automation bot** for Hypixel Skyblock. It moves
 
 | Dependency | Version field | Location |
 |------------|--------------|----------|
-| PlayerAPI | `playerapi_version` in `gradle.properties` | `C:\Users\willi\Documents\FarmBot\PlayerAPI` |
+| PlayerAPI | `playerapi_version` in `gradle.properties` | `C:\Users\willi\Documents\completeMods\PlayerAPI` |
 
 **Build order:** If you changed PlayerAPI, run `./gradlew publishToMavenLocal` there first, then build Ceres.
 
@@ -82,7 +82,7 @@ These keys are the source of truth. `BotConfig.ALL_HUD_LINES` is the authoritati
 
 ### PlayerAPI version in use
 
-Ceres currently uses PlayerAPI **1.7.0**. Key additions in recent versions used here:
+Ceres currently uses PlayerAPI **1.12.0**. Key additions in recent versions used here:
 - `TabListInfo.isLineStrikethrough(String substring)` — used to detect the crossed-out "Bonus Pest Chance" line
 - `PlayerAPIEvents.BLOCK_BROKEN` — used for BPS (blocks per second) tracking
 - `SoundActions.playByIdRepeated()` — used for all alarm sounds
@@ -151,7 +151,7 @@ Ceres never imports `net.minecraft.*` except in `BotHudRenderer` (rendering only
 
 ## 1. Overview & Purpose
 
-Ceres is a **client-side Fabric farming automation mod** for Minecraft 1.21.11. It moves the player along a pre-recorded path, holds the attack key to break crops, and manages a suite of supporting systems: repellent auto-use, safety checkers, a live HUD overlay, and a GUI for editing paths and configuration.
+Ceres is a **client-side Fabric farming automation mod** for Minecraft 26.1.2. It moves the player along a pre-recorded path, holds the attack key to break crops, and manages a suite of supporting systems: repellent auto-use, safety checkers, a live HUD overlay, and a GUI for editing paths and configuration.
 
 Ceres is built entirely on top of **PlayerAPI** — it never imports Minecraft internals directly. All player movement, inventory access, interaction, and world queries go through PlayerAPI's abstraction layer.
 
@@ -232,10 +232,10 @@ PlayerAPIEvents.TICK (main game thread, every tick)
 
 ## 3. Installation
 
-1. Install Fabric Loader 0.18.4 for Minecraft 1.21.11.
-2. Install Fabric API 0.141.3+1.21.11.
-3. Place **PlayerAPI** `playerapi-1.7.0.jar` in your mods folder.
-4. Place **Ceres** `ceres-1.1.0.jar` in your mods folder.
+1. Install Fabric Loader 0.19.2 for Minecraft 26.1.2.
+2. Install Fabric API 0.149.1+26.1.2.
+3. Place **PlayerAPI** `playerapi-1.12.0.jar` in your mods folder.
+4. Place **Ceres** `ceres-1.1.1.jar` in your mods folder.
 5. (Optional) Install ModMenu to get the "Config" button in the mods list.
 
 Ceres generates its config files in `.minecraft/config/ceres/` on first launch.

@@ -5,13 +5,13 @@ import com.ceres.path.PathConfig;
 import com.ceres.path.PathType;
 import com.ceres.path.ProfileManager;
 import com.ceres.path.Waypoint;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.chat.Component;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -59,7 +59,7 @@ public class PathEditorScreen extends Screen {
     // ── Profile state ─────────────────────────────────────────────────────────
     private boolean showProfileList   = false;
     private int profileScrollOffset   = 0;
-    private TextFieldWidget profileNameField;
+    private EditBox profileNameField;
 
     // ── Session tracking (profile name → HUD) ─────────────────────────────────
     /** Name of the profile last loaded in this session; null if none loaded. */
@@ -70,7 +70,7 @@ public class PathEditorScreen extends Screen {
     private boolean sessionTouched    = false;
 
     public PathEditorScreen() {
-        super(Text.literal("Path Editor"));
+        super(Component.literal("Path Editor"));
     }
 
     @Override
@@ -97,11 +97,12 @@ public class PathEditorScreen extends Screen {
     //  Widget construction
     // ─────────────────────────────────────────────────────────────────────────
 
-    private void rebuildWidgets() {
-        // Preserve text across rebuilds — clearChildren() destroys the widget reference
-        String savedProfileName = profileNameField != null ? profileNameField.getText() : "";
+    @Override
+    protected void rebuildWidgets() {
+        // Preserve text across rebuilds — clearWidgets() destroys the widget reference
+        String savedProfileName = profileNameField != null ? profileNameField.getValue() : "";
 
-        clearChildren();
+        clearWidgets();
 
         buildProfileBar(savedProfileName);
 
@@ -118,7 +119,7 @@ public class PathEditorScreen extends Screen {
     // ── Profile bar (always visible at top) ───────────────────────────────────
 
     private void buildProfileBar(String savedName) {
-        int labelW  = textRenderer.getWidth("Profile: ") + 4;
+        int labelW  = font.width("Profile: ") + 4;
         int btnH    = PROFILE_H - 6;
         int btnY    = 3;
 
@@ -131,35 +132,35 @@ public class PathEditorScreen extends Screen {
         int fieldW  = Math.max(60, saveX - labelW - 6);
 
         // Text field
-        profileNameField = new TextFieldWidget(
-                textRenderer, labelW, btnY + 1, fieldW, btnH + 2,
-                Text.literal("Profile name"));
+        profileNameField = new EditBox(
+                font, labelW, btnY + 1, fieldW, btnH + 2,
+                Component.literal("Profile name"));
         profileNameField.setMaxLength(64);
-        profileNameField.setPlaceholder(Text.literal("profile name..."));
-        profileNameField.setText(savedName);
-        addDrawableChild(profileNameField);
+        profileNameField.setHint(Component.literal("profile name..."));
+        profileNameField.setValue(savedName);
+        addRenderableWidget(profileNameField);
 
         // [Save]
-        addDrawableChild(ButtonWidget.builder(Text.literal("Save"), btn -> onSaveProfile())
-                .dimensions(saveX, btnY, 36, btnH).build());
+        addRenderableWidget(Button.builder(Component.literal("Save"), btn -> onSaveProfile())
+                .bounds(saveX, btnY, 36, btnH).build());
 
         // [Load ▼ / ▲]
-        addDrawableChild(ButtonWidget.builder(
-                Text.literal(showProfileList ? "Load ▲" : "Load ▼"),
+        addRenderableWidget(Button.builder(
+                Component.literal(showProfileList ? "Load ▲" : "Load ▼"),
                 btn -> {
                     showProfileList = !showProfileList;
                     profileScrollOffset = 0;
                     rebuildWidgets();
-                }).dimensions(loadX, btnY, 46, btnH).build());
+                }).bounds(loadX, btnY, 46, btnH).build());
 
         // [Delete]
-        addDrawableChild(ButtonWidget.builder(Text.literal("Delete"), btn -> onDeleteProfile())
-                .dimensions(deleteX, btnY, 42, btnH).build());
+        addRenderableWidget(Button.builder(Component.literal("Delete"), btn -> onDeleteProfile())
+                .bounds(deleteX, btnY, 42, btnH).build());
 
         // [Folder]
-        addDrawableChild(ButtonWidget.builder(Text.literal("Folder"),
+        addRenderableWidget(Button.builder(Component.literal("Folder"),
                 btn -> ProfileManager.getInstance().openProfilesFolder())
-                .dimensions(folderX, btnY, 42, btnH).build());
+                .bounds(folderX, btnY, 42, btnH).build());
     }
 
     // ── Tab / sprint bar ──────────────────────────────────────────────────────
@@ -172,17 +173,17 @@ public class PathEditorScreen extends Screen {
         for (int i = 0; i < types.length; i++) {
             PathType t = types[i];
             boolean active = t == activeTab;
-            addDrawableChild(ButtonWidget.builder(
-                    Text.literal(active ? "▶ " + t.name() : t.name()),
+            addRenderableWidget(Button.builder(
+                    Component.literal(active ? "▶ " + t.name() : t.name()),
                     btn -> { activeTab = t; scrollOffset = 0; expandedRow = -1; rebuildWidgets(); })
-                    .dimensions(8 + i * (tabW + 3), tabY, tabW, tabH).build());
+                    .bounds(8 + i * (tabW + 3), tabY, tabW, tabH).build());
         }
 
         boolean sprint = editSprint.getOrDefault(activeTab, true);
-        addDrawableChild(ButtonWidget.builder(
-                Text.literal("Sprint: " + (sprint ? "§aON" : "§cOFF")),
+        addRenderableWidget(Button.builder(
+                Component.literal("Sprint: " + (sprint ? "§aON" : "§cOFF")),
                 btn -> { editSprint.put(activeTab, !sprint); markDirty(); rebuildWidgets(); })
-                .dimensions(width - 88, tabY, 80, tabH).build());
+                .bounds(width - 88, tabY, 80, tabH).build());
     }
 
     // ── Profile list (replaces waypoint list when showProfileList) ────────────
@@ -197,9 +198,9 @@ public class PathEditorScreen extends Screen {
              i++) {
             final String name = profiles.get(i);
             int rowY = LIST_Y + (i - profileScrollOffset) * ROW_H;
-            addDrawableChild(ButtonWidget.builder(Text.literal(name),
+            addRenderableWidget(Button.builder(Component.literal(name),
                     btn -> onLoadProfile(name))
-                    .dimensions(8, rowY + 2, width - 16, ROW_H - 4).build());
+                    .bounds(8, rowY + 2, width - 16, ROW_H - 4).build());
         }
     }
 
@@ -220,29 +221,29 @@ public class PathEditorScreen extends Screen {
             int bx   = 8;
 
             if (i > 0)
-                addDrawableChild(ButtonWidget.builder(Text.literal("↑"),
+                addRenderableWidget(Button.builder(Component.literal("↑"),
                         btn -> moveWaypoint(idx, idx - 1))
-                        .dimensions(bx, rowY + 3, BTN_SMALL, BTN_SMALL).build());
+                        .bounds(bx, rowY + 3, BTN_SMALL, BTN_SMALL).build());
             bx += BTN_SMALL + 2;
 
             if (i < waypoints.size() - 1)
-                addDrawableChild(ButtonWidget.builder(Text.literal("↓"),
+                addRenderableWidget(Button.builder(Component.literal("↓"),
                         btn -> moveWaypoint(idx, idx + 1))
-                        .dimensions(bx, rowY + 3, BTN_SMALL, BTN_SMALL).build());
+                        .bounds(bx, rowY + 3, BTN_SMALL, BTN_SMALL).build());
             bx += BTN_SMALL + 2;
 
-            addDrawableChild(ButtonWidget.builder(Text.literal("✕"),
+            addRenderableWidget(Button.builder(Component.literal("✕"),
                     btn -> { waypoints.remove(idx); if (expandedRow == idx) expandedRow = -1; markDirty(); rebuildWidgets(); })
-                    .dimensions(bx, rowY + 3, BTN_SMALL, BTN_SMALL).build());
+                    .bounds(bx, rowY + 3, BTN_SMALL, BTN_SMALL).build());
             bx += BTN_SMALL + 4;
 
             Waypoint w = waypoints.get(i);
             String keysLabel = w.hasForcedKeys()
                     ? "[" + String.join(", ", w.forcedKeys) + "]"
                     : "None";
-            addDrawableChild(ButtonWidget.builder(Text.literal(keysLabel),
+            addRenderableWidget(Button.builder(Component.literal(keysLabel),
                     btn -> { expandedRow = (expandedRow == idx) ? -1 : idx; rebuildWidgets(); })
-                    .dimensions(bx, rowY + 3, 90, BTN_SMALL).build());
+                    .bounds(bx, rowY + 3, 90, BTN_SMALL).build());
         }
 
         buildExpandedKeyEditor(waypoints);
@@ -258,34 +259,34 @@ public class PathEditorScreen extends Screen {
 
         for (String key : KEY_OPTIONS) {
             boolean on = w.forcedKeys.contains(key);
-            addDrawableChild(ButtonWidget.builder(
-                    Text.literal(on ? "§e[" + key + "]" : key),
+            addRenderableWidget(Button.builder(
+                    Component.literal(on ? "§e[" + key + "]" : key),
                     btn -> {
                         if (w.forcedKeys.contains(key)) w.forcedKeys.remove(key);
                         else w.forcedKeys.add(key);
                         markDirty();
                         rebuildWidgets();
                     })
-                    .dimensions(kx, editorY, keyBtnW, 14).build());
+                    .bounds(kx, editorY, keyBtnW, 14).build());
             kx += keyBtnW + 2;
             if (kx + keyBtnW > width - 70) { kx = 10; editorY += 16; }
         }
 
-        addDrawableChild(ButtonWidget.builder(Text.literal("Clear"),
+        addRenderableWidget(Button.builder(Component.literal("Clear"),
                 btn -> { w.forcedKeys.clear(); markDirty(); rebuildWidgets(); })
-                .dimensions(kx, editorY, 46, 14).build());
+                .bounds(kx, editorY, 46, 14).build());
     }
 
     // ── Footer ────────────────────────────────────────────────────────────────
 
     private void buildFooter() {
-        addDrawableChild(ButtonWidget.builder(Text.literal("Done"), btn -> close())
-                .dimensions(width / 2 - 50, height - FOOTER_H + 4, 100, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Done"), btn -> onClose())
+                .bounds(width / 2 - 50, height - FOOTER_H + 4, 100, 20).build());
 
         if (!showProfileList) {
-            addDrawableChild(ButtonWidget.builder(Text.literal("+ Add Here"),
+            addRenderableWidget(Button.builder(Component.literal("+ Add Here"),
                     btn -> {
-                        ClientPlayerEntity player = MinecraftClient.getInstance().player;
+                        LocalPlayer player = Minecraft.getInstance().player;
                         if (player != null) {
                             List<Waypoint> waypoints = editPaths.get(activeTab);
                             waypoints.add(new Waypoint(player.getX(), player.getY(), player.getZ()));
@@ -296,7 +297,7 @@ public class PathEditorScreen extends Screen {
                             rebuildWidgets();
                         }
                     })
-                    .dimensions(width - 118, height - FOOTER_H + 4, 110, 20).build());
+                    .bounds(width - 118, height - FOOTER_H + 4, 110, 20).build());
         }
     }
 
@@ -305,7 +306,7 @@ public class PathEditorScreen extends Screen {
     // ─────────────────────────────────────────────────────────────────────────
 
     private String profileName() {
-        return profileNameField != null ? profileNameField.getText().trim() : "";
+        return profileNameField != null ? profileNameField.getValue().trim() : "";
     }
 
     private void onSaveProfile() {
@@ -324,7 +325,7 @@ public class PathEditorScreen extends Screen {
         for (PathType t : PathType.values())
             editPaths.put(t, new ArrayList<>(data.paths().getOrDefault(t, List.of())));
 
-        if (profileNameField != null) profileNameField.setText(name);
+        if (profileNameField != null) profileNameField.setValue(name);
 
         // Track which profile is loaded so close() can update the HUD name
         loadedProfileName = name;
@@ -361,25 +362,25 @@ public class PathEditorScreen extends Screen {
     // ─────────────────────────────────────────────────────────────────────────
 
     @Override
-    public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor ctx, int mouseX, int mouseY, float delta) {
         ctx.fill(0, 0, width, height, 0xC0101010);
 
         // Profile bar tint
         ctx.fill(0, 0, width, PROFILE_H + 2, 0x28FFFFFF);
         ctx.fill(0, PROFILE_H + 2, width, PROFILE_H + 3, 0x40FFFFFF);
-        ctx.drawText(textRenderer, "Profile:", 8, 7, 0xFFAAAAAA, false);
+        ctx.text(font, "Profile:", 8, 7, 0xFFAAAAAA, false);
 
         if (showProfileList) {
             // Hint bar in place of the tab row
             ctx.fill(0, TAB_Y_BASE, width, LIST_Y - 2, 0x18FFFFFF);
             ctx.fill(0, LIST_Y - 2, width, LIST_Y - 1, 0x40FFFFFF);
-            ctx.drawText(textRenderer, "Select a profile to load:",
+            ctx.text(font, "Select a profile to load:",
                     8, TAB_Y_BASE + 8, 0xFF888888, false);
 
             // Alternating row tints for profile buttons
             List<String> profiles = ProfileManager.getInstance().listProfiles();
             if (profiles.isEmpty()) {
-                ctx.drawText(textRenderer, "No profiles found — save one first.",
+                ctx.text(font, "No profiles found — save one first.",
                         8, LIST_Y + 6, 0xFF555555, false);
             } else {
                 int listH = height - LIST_Y - FOOTER_H;
@@ -399,8 +400,8 @@ public class PathEditorScreen extends Screen {
             // Waypoint count (top-right of tab bar)
             List<Waypoint> waypoints = editPaths.get(activeTab);
             String count = waypoints.size() + " waypoints";
-            ctx.drawText(textRenderer, count,
-                    width - textRenderer.getWidth(count) - 96,
+            ctx.text(font, count,
+                    width - font.width(count) - 96,
                     TAB_Y_BASE + 9, 0xFF555555, false);
 
             // Waypoint row backgrounds + coord labels
@@ -414,14 +415,14 @@ public class PathEditorScreen extends Screen {
 
                 Waypoint w = waypoints.get(i);
                 String label = String.format("#%d   %.1f / %.1f / %.1f", i + 1, w.x, w.y, w.z);
-                ctx.drawText(textRenderer, label, 154, rowY + 6, 0xFFCCCCCC, false);
+                ctx.text(font, label, 154, rowY + 6, 0xFFCCCCCC, false);
             }
         }
 
         // Footer separator
         ctx.fill(0, height - FOOTER_H, width, height - FOOTER_H + 1, 0x30FFFFFF);
 
-        super.render(ctx, mouseX, mouseY, delta);
+        super.extractRenderState(ctx, mouseX, mouseY, delta);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -448,7 +449,7 @@ public class PathEditorScreen extends Screen {
     // ─────────────────────────────────────────────────────────────────────────
 
     @Override
-    public void close() {
+    public void onClose() {
         PathConfig.getInstance().setAllSprintSettings(editSprint);
         PathConfig.getInstance().setAllPaths(editPaths); // also calls save()
 
@@ -460,9 +461,9 @@ public class PathEditorScreen extends Screen {
             BotStateManager.getInstance().setActiveProfileName(profileForHud);
         }
 
-        client.setScreen(null);
+        this.minecraft.setScreen(null);
     }
 
     @Override
-    public boolean shouldPause() { return false; }
+    public boolean isPauseScreen() { return false; }
 }
