@@ -16,7 +16,7 @@ Named after the Roman goddess of agriculture.
 Ceres follows a sequence of recorded waypoints while holding the attack key to break crops. Two independent path slots (Primary and Secondary) let you define separate routes — for example an outward pass and a return pass. Each path has its own sprint toggle. Paths are recorded in-game by walking your route and pressing "Add Here" in the Path Editor.
 
 ### Smart Profile Auto-Load
-When you start the bot, Ceres reads your held tool's display name and loads the matching crop profile automatically. A Wheat Hoe loads your Wheat profile; a Carrot Hoe loads Carrot — even reforged tools work because matching is substring-based. Profiles save the full path configuration (both slots + sprint settings) as named files you can switch between at any time.
+When you start the bot, Ceres reads your held tool's display name and loads the matching crop profile automatically. A Wheat Sickle loads your Wheat profile; a Carrot Shovel loads Carrot — even reforged tools work because matching is substring-based. Profiles save the full path configuration (both slots + sprint settings) as named files you can switch between at any time.
 
 ### Passive Safety Checkers
 Four independent monitors run continuously while farming:
@@ -107,7 +107,7 @@ The in-game update checker is Minecraft-version aware: if the latest release tar
 
 # Ceres — Design & Reference Documentation
 
-**Version:** 1.1.2  
+**Version:** 1.1.3  
 **Minecraft:** 26.1.2 (Fabric)  
 **Depends on:** PlayerAPI 1.12.0+  
 

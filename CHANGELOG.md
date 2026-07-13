@@ -4,6 +4,14 @@
 
 ---
 
+## [1.1.3] - 2026-07-10
+### Fixed
+- **Resource-pack tool names.** The mandatory resource pack renamed the farming tools (Hoe →
+  Sickle / Shovel / Cutter), which broke held-tool → crop-profile auto-loading. Updated the tool
+  matcher to the new names: Wheat **Sickle**, Carrot/Potato **Shovel**, Sugar Cane / Nether Wart /
+  Wild Rose **Cutter**, and Eclipse **Sickle**. Cactus Knife, Cocoa Chopper, Fungi Cutter, and
+  Melon/Pumpkin Dicer were unchanged.
+
 ## [1.1.2] - 2026-06-17
 ### Changed
 - Update checker moved to PlayerAPI's shared `UpdateChecker` (requires PlayerAPI 1.12.0+). Adds a

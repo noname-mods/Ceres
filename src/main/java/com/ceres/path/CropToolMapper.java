@@ -11,10 +11,13 @@ import java.util.Map;
  * Used on bot start to auto-load the right profile without the player needing to do it manually.
  *
  * <p>Matching is substring-based (case-insensitive) so reforged / tiered tools like
- * "Blessed Euclid's Wheat Hoe Mk. II" still match — the key part is always present
+ * "Blessed Euclid's Wheat Sickle Mk. II" still match — the key part is always present
  * somewhere in the display name regardless of prefix or suffix.
  *
- * <p>Eclipse Hoe is a special case: it is used for both Sunflower and
+ * <p>Tool type names come from the mandatory resource pack (Sickle / Shovel / Cutter),
+ * which replaced the older "Hoe" naming.
+ *
+ * <p>Eclipse Sickle is a special case: it is used for both Sunflower and
  * Moonflower (same plant, different time of day).  Resolution priority:
  * <ol>
  *   <li>If both "Sunflower" and "Moonflower" profiles exist → use "Sunflower"</li>
@@ -38,18 +41,18 @@ public final class CropToolMapper {
     private static final Map<String, String> TOOL_TO_PROFILE = new LinkedHashMap<>();
 
     static {
-        TOOL_TO_PROFILE.put("cactus knife",    "Cactus");
-        TOOL_TO_PROFILE.put("carrot hoe",      "Carrot");
-        TOOL_TO_PROFILE.put("cocoa chopper",   "Cocoa Beans");
-        TOOL_TO_PROFILE.put("fungi cutter",    "Mushroom");
-        TOOL_TO_PROFILE.put("melon dicer",     "Melon");
-        TOOL_TO_PROFILE.put("nether wart hoe", "Nether Wart");
-        TOOL_TO_PROFILE.put("potato hoe",      "Potato");
-        TOOL_TO_PROFILE.put("pumpkin dicer",   "Pumpkin");
-        TOOL_TO_PROFILE.put("sugar cane hoe",  "Sugarcane");
-        TOOL_TO_PROFILE.put("wheat hoe",       "Wheat");
-        TOOL_TO_PROFILE.put("wild rose hoe",   "Wild Rose");
-        // Eclipse Hoe (Sunflower/Moonflower) handled separately in resolveEclipseHoe()
+        TOOL_TO_PROFILE.put("cactus knife",       "Cactus");
+        TOOL_TO_PROFILE.put("carrot shovel",      "Carrot");
+        TOOL_TO_PROFILE.put("cocoa chopper",      "Cocoa Beans");
+        TOOL_TO_PROFILE.put("fungi cutter",       "Mushroom");
+        TOOL_TO_PROFILE.put("melon dicer",        "Melon");
+        TOOL_TO_PROFILE.put("wart cutter",        "Nether Wart");
+        TOOL_TO_PROFILE.put("potato shovel",      "Potato");
+        TOOL_TO_PROFILE.put("pumpkin dicer",      "Pumpkin");
+        TOOL_TO_PROFILE.put("sugar cane cutter",  "Sugarcane");
+        TOOL_TO_PROFILE.put("wheat sickle",       "Wheat");
+        TOOL_TO_PROFILE.put("wild rose cutter",   "Wild Rose");
+        // Eclipse Sickle (Sunflower/Moonflower) handled separately in resolveEclipseHoe()
     }
 
     private CropToolMapper() {}
@@ -64,7 +67,7 @@ public final class CropToolMapper {
 
         String lower = held.toLowerCase();
 
-        if (lower.contains("eclipse hoe")) {
+        if (lower.contains("eclipse sickle")) {
             return resolveEclipseHoe();
         }
 

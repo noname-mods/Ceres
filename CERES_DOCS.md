@@ -1,116 +1,8 @@
 # Ceres — Design & Reference Documentation
 
-**Version:** 1.1.2  
+**Version:** 1.1.3  
 **Minecraft:** 26.1.2 (Fabric)  
 **Depends on:** PlayerAPI 1.12.0+  
-
----
-
-## AI Session Quick-Start
-
-> **Read this first if you are a new Claude Code session working in this folder.**
-
-### What this mod is
-
-Ceres is a **client-side farming automation bot** for Hypixel Skyblock. It moves the player along a pre-recorded waypoint path, holds the attack key to break crops, auto-uses Pest Repellent, monitors safety conditions, and displays a live HUD. It is built entirely on top of PlayerAPI and never imports Minecraft internals directly.
-
-### Key dependency
-
-| Dependency | Version field | Location |
-|------------|--------------|----------|
-| PlayerAPI | `playerapi_version` in `gradle.properties` | `C:\Users\willi\Documents\completeMods\PlayerAPI` |
-
-**Build order:** If you changed PlayerAPI, run `./gradlew publishToMavenLocal` there first, then build Ceres.
-
-### Source layout (what lives where)
-
-```
-src/main/java/com/ceres/
-├── CeresMod.java                  — entry point, event wiring, keybind handling
-├── core/
-│   ├── BotState.java              — enum: STOPPED / PAUSED / RUNNING
-│   ├── BotStateManager.java       — THE central singleton: all live state, tab list data, BPS tracking
-│   ├── BotConfig.java             — all persistent settings, JSON config, versioned migrations
-│   └── BotLogger.java             — ring-buffer logger + file output
-├── path/
-│   ├── Waypoint.java              — record(x, y, z, pathType)
-│   ├── PathType.java              — enum: PRIMARY / SECONDARY / EVACUATION
-│   ├── PathConfig.java            — the in-memory path model (waypoints + loop flag)
-│   ├── PathManager.java           — walks the path each tick (movement + attack)
-│   ├── ProfileManager.java        — loads/saves named .json profile files
-│   └── CropToolMapper.java        — maps tool item IDs → profile names (auto-load)
-├── tablist/
-│   └── CeresTabListReader.java    — parses Hypixel tab list each tick → BotStateManager fields
-├── checkers/
-│   ├── CheckerController.java     — orchestrates all checkers, random reset interval
-│   ├── InventoryChecker.java      — detects stalled inventory (crops not changing)
-│   ├── ToolChecker.java           — verifies correct tool is held
-│   ├── YawPitchChecker.java       — detects unexpected look direction changes
-│   └── PestChecker.java           — stops bot when pest count reaches threshold
-├── repellent/
-│   └── PestRepellentManager.java  — detects repellent expiry, auto-uses from inventory
-└── gui/
-    ├── BotHudRenderer.java        — all HUD rendering (main panel + log panel)
-    ├── CeresConfigScreen.java     — YACL config screen (5 tabs)
-    └── PathEditorScreen.java      — path recording/editing GUI
-```
-
-### Config files (in `<game>/config/ceres/`)
-
-| File | Contents |
-|------|----------|
-| `config.json` | All `BotConfig` settings (schema versioned, auto-migrated) |
-| `paths.json` | The active waypoint data (Primary + Secondary + Evacuation paths) |
-| `profiles/<name>.json` | One file per saved profile (same format as paths.json) |
-| `ceres.log` | Appended log output |
-
-### BotConfig schema version — current: 3
-
-When adding a new config field that defaults to `true` (boolean), you **must** add a migration step — GSON defaults missing booleans to `false`. Pattern:
-1. Bump `CURRENT_VERSION`
-2. Add `migrateVn()` method
-3. Call it in `migrate()`
-4. Add the field to the manual-copy block in `load()`
-
-If `INSTANCE` needs to iterate a new static list in the constructor, declare the list **before** `INSTANCE` in the class — static fields initialise in declaration order and a `NullPointerException` will result otherwise (this was a real bug).
-
-### HUD line keys (all 14, used in BotConfig.hudLines map)
-
-`"profile"`, `"area"`, `"xyz"`, `"look"`, `"pests"`, `"plots"`, `"spray"`, `"repellent"`, `"bonus"`, `"cooldown"`, `"pest_chance"`, `"path"`, `"bps"`, `"target"`
-
-These keys are the source of truth. `BotConfig.ALL_HUD_LINES` is the authoritative list. The config screen, HUD renderer, and migration all derive from it.
-
-### PlayerAPI version in use
-
-Ceres currently uses PlayerAPI **1.12.0**. Key additions in recent versions used here:
-- `TabListInfo.isLineStrikethrough(String substring)` — used to detect the crossed-out "Bonus Pest Chance" line
-- `PlayerAPIEvents.BLOCK_BROKEN` — used for BPS (blocks per second) tracking
-- `SoundActions.playByIdRepeated()` — used for all alarm sounds
-- `DisplayActions` — not used in Ceres (used in Poseidon)
-
-### Common things you'll need to touch
-
-**Adding a new HUD row:**
-1. Add the key string to `BotConfig.ALL_HUD_LINES`
-2. Bump `BotConfig.CURRENT_VERSION` and add a migration
-3. Add the toggle to `CeresConfigScreen` (use the `hudLineOption()` helper)
-4. Add the render call in `BotHudRenderer` (gate it with `cfg.isHudLineVisible("key")`)
-5. If the value comes from the tab list, add parsing in `CeresTabListReader` and a field + getter in `BotStateManager`
-
-**Adding a new config setting:**
-1. Add field + getter/setter to `BotConfig`
-2. Add to the manual-copy block in `BotConfig.load()`
-3. Add the YACL option to the appropriate tab in `CeresConfigScreen`
-4. If it's a new boolean defaulting to true: add a migration
-
-**Changing tab list parsing:**
-- All tab list logic is in `CeresTabListReader.java`
-- Values are written to `BotStateManager` via setters
-- `TabListInfo` is the PlayerAPI class used (static methods, no instantiation)
-
-### Key design rule
-
-Ceres never imports `net.minecraft.*` except in `BotHudRenderer` (rendering only) and `CeresMod` (keybind registration + Fabric hooks). All player interaction, world queries, and scheduling go through PlayerAPI classes.
 
 ---
 
@@ -452,26 +344,26 @@ Profiles are identified by filename (without the `.json` extension). File names 
 
 Maps the player's held tool display name to a profile name. Used only at bot start by `autoLoadAndStart()`.
 
-**Matching is substring-based and case-insensitive.** The key fragment (e.g. `"wheat hoe"`) only needs to appear somewhere in the full display name, so reforged or tiered items like `"Blessed Euclid's Wheat Hoe Mk. II"` are matched correctly.
+**Matching is substring-based and case-insensitive.** The key fragment (e.g. `"wheat sickle"`) only needs to appear somewhere in the full display name, so reforged or tiered items like `"Blessed Euclid's Wheat Sickle Mk. II"` are matched correctly. Tool type names (Sickle / Shovel / Cutter) come from the mandatory resource pack, which replaced the older "Hoe" naming.
 
 **Full tool → profile mapping:**
 
 | Tool name substring | Resolves to profile |
 |--------------------|---------------------|
 | `"cactus knife"` | `Cactus` |
-| `"carrot hoe"` | `Carrot` |
+| `"carrot shovel"` | `Carrot` |
 | `"cocoa chopper"` | `Cocoa Beans` |
 | `"fungi cutter"` | `Mushroom` |
 | `"melon dicer"` | `Melon` |
-| `"nether wart hoe"` | `Nether Wart` |
-| `"potato hoe"` | `Potato` |
+| `"wart cutter"` | `Nether Wart` |
+| `"potato shovel"` | `Potato` |
 | `"pumpkin dicer"` | `Pumpkin` |
-| `"sugar cane hoe"` | `Sugarcane` |
-| `"wheat hoe"` | `Wheat` |
-| `"wild rose hoe"` | `Wild Rose` |
-| `"eclipse hoe"` | *see below* |
+| `"sugar cane cutter"` | `Sugarcane` |
+| `"wheat sickle"` | `Wheat` |
+| `"wild rose cutter"` | `Wild Rose` |
+| `"eclipse sickle"` | *see below* |
 
-**Eclipse Hoe special case:** The Eclipse Hoe is used for both Sunflower and Moonflower (they are the same plant but flower at different times of day). Resolution priority:
+**Eclipse Sickle special case:** The Eclipse Sickle is used for both Sunflower and Moonflower (they are the same plant but flower at different times of day). Resolution priority:
 1. Both `Sunflower` and `Moonflower` profiles exist on disk → resolves to `"Sunflower"`.
 2. Only one exists → resolves to that one.
 3. Neither exists → returns `null` (no auto-load; bot starts with current paths).
