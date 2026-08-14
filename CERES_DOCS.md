@@ -1,8 +1,8 @@
 # Ceres — Design & Reference Documentation
 
-**Version:** 1.1.3  
+**Version:** 1.1.4  
 **Minecraft:** 26.1.2 (Fabric)  
-**Depends on:** PlayerAPI 1.12.0+  
+**Depends on:** PlayerAPI 1.18.0+  
 
 ---
 
@@ -26,6 +26,8 @@
    - [ToolChecker](#73-toolchecker)
    - [YawPitchChecker](#74-yawpitchchecker)
    - [PestChecker](#75-pestchecker)
+   - [MovementChecker](#76-movementchecker-no-movement)
+   - [CropChecker](#77-cropchecker-start-of-run-crop-match)
 8. [Pest Repellent Manager](#8-pest-repellent-manager)
 9. [Tab List Reader](#9-tab-list-reader)
 10. [BotStateManager](#10-botstatemanager)
@@ -126,8 +128,8 @@ PlayerAPIEvents.TICK (main game thread, every tick)
 
 1. Install Fabric Loader 0.19.2 for Minecraft 26.1.2.
 2. Install Fabric API 0.149.1+26.1.2.
-3. Place **PlayerAPI** `playerapi-1.12.0.jar` in your mods folder.
-4. Place **Ceres** `ceres-1.1.1.jar` in your mods folder.
+3. Place **PlayerAPI** `playerapi-1.18.0.jar` (or newer) in your mods folder.
+4. Place **Ceres** `ceres-1.1.4.jar` in your mods folder.
 5. (Optional) Install ModMenu to get the "Config" button in the mods list.
 
 Ceres generates its config files in `.minecraft/config/ceres/` on first launch.
@@ -342,26 +344,28 @@ Profiles are identified by filename (without the `.json` extension). File names 
 
 ### 6.6 CropToolMapper
 
-Maps the player's held tool display name to a profile name. Used only at bot start by `autoLoadAndStart()`.
+Maps the player's held tool to a profile name. Used only at bot start by `autoLoadAndStart()`.
 
-**Matching is substring-based and case-insensitive.** The key fragment (e.g. `"wheat sickle"`) only needs to appear somewhere in the full display name, so reforged or tiered items like `"Blessed Euclid's Wheat Sickle Mk. II"` are matched correctly. Tool type names (Sickle / Shovel / Cutter) come from the mandatory resource pack, which replaced the older "Hoe" naming.
+**Matching is by the item's stable SkyBlock internal id, not its display name.** Hypixel renames display names constantly, but the NBT `id` (read via `PlayerInfo.getHeldItem().skyblockId()`, PlayerAPI 1.18.0+) is stable. `CropToolMapper` matches on the id **prefix** with `startsWith`, so the tier suffix (`_1`/`_2`/`_3`) is ignored and all tiers of a tool resolve to the same profile.
 
-**Full tool → profile mapping:**
+**Full id-prefix → profile mapping:**
 
-| Tool name substring | Resolves to profile |
+| SkyBlock id prefix | Resolves to profile |
 |--------------------|---------------------|
-| `"cactus knife"` | `Cactus` |
-| `"carrot shovel"` | `Carrot` |
-| `"cocoa chopper"` | `Cocoa Beans` |
-| `"fungi cutter"` | `Mushroom` |
-| `"melon dicer"` | `Melon` |
-| `"wart cutter"` | `Nether Wart` |
-| `"potato shovel"` | `Potato` |
-| `"pumpkin dicer"` | `Pumpkin` |
-| `"sugar cane cutter"` | `Sugarcane` |
-| `"wheat sickle"` | `Wheat` |
-| `"wild rose cutter"` | `Wild Rose` |
-| `"eclipse sickle"` | *see below* |
+| `THEORETICAL_HOE_WHEAT` | `Wheat` |
+| `THEORETICAL_HOE_CARROT` | `Carrot` |
+| `THEORETICAL_HOE_POTATO` | `Potato` |
+| `THEORETICAL_HOE_CANE` | `Sugarcane` |
+| `THEORETICAL_HOE_WARTS` | `Nether Wart` |
+| `THEORETICAL_HOE_WILD_ROSE` | `Wild Rose` |
+| `THEORETICAL_HOE_SUNFLOWER` | *Eclipse — see below* |
+| `MELON_DICER` | `Melon` |
+| `PUMPKIN_DICER` | `Pumpkin` |
+| `FUNGI_CUTTER` | `Mushroom` |
+| `COCO_CHOPPER` | `Cocoa Beans` |
+| `CACTUS_KNIFE` | `Cactus` |
+
+(`THEORETICAL_HOE_*` tools always carry a numbered tier; the dicer/cutter/knife tools have no number at tier 1, then `_2`/`_3`. The prefix match handles both.)
 
 **Eclipse Sickle special case:** The Eclipse Sickle is used for both Sunflower and Moonflower (they are the same plant but flower at different times of day). Resolution priority:
 1. Both `Sunflower` and `Moonflower` profiles exist on disk → resolves to `"Sunflower"`.
@@ -416,8 +420,8 @@ Runs every tick while `RUNNING`. Operates in two phases that alternate on a **60
 **Purpose:** Detect if the player's held item changed from what was held when the bot started.
 
 **How it works:**
-- On reset: records `BotStateManager.getInitialTool()` (the display name of the held item when `startBot()` was called).
-- On check: compares the current held item's display name to the initial tool (case-insensitive).
+- On reset: records `BotStateManager.getInitialToolId()` (the held item's **SkyBlock id** when `startBot()` was called) into `initialToolId`.
+- On check: compares the currently held item's SkyBlock id to `initialToolId` (exact equals). Using the stable id rather than the renamed display name avoids false alerts from Hypixel's cosmetic renames.
 
 **On failure:** Logs a warning and **continues**. Does not stop the bot. This is intentional — other systems (including the Repellent Manager) legitimately switch items, and the bot should continue farming regardless.
 
@@ -448,6 +452,33 @@ Runs every tick while `RUNNING`. Operates in two phases that alternate on a **60
 - Rate-limited: will not alert more than once per 600 ticks (30 seconds) to avoid alert spam.
 
 **On failure:** Plays the warn alert sound. **Does not stop the bot.** The alert is informational — it is up to the player to decide whether to stop and deal with the pests.
+
+---
+
+### 7.6 MovementChecker (no-movement)
+
+**Purpose:** Detect that the bot has stopped making progress — the player's position has stalled while it should be walking the path (e.g. snagged on terrain, or input was lost).
+
+**How it works:**
+- Tracks the player's position; if it hasn't moved beyond a small epsilon for ~2 seconds while RUNNING, it flags.
+- Gated by `BotConfig.isMovementCheckerEnabled()` (schema v8, default true).
+
+**On failure:** requests a **soft stop** via `BotStateManager.requestSoftStop` — the bot continues ~1 s, then stops cleanly (releases keys, frees the mouse lock). Unlike the alert-only checkers, this one halts the bot, since a stalled bot is doing nothing useful.
+
+---
+
+### 7.7 CropChecker (start-of-run crop match)
+
+**Purpose:** Catch the case where the loaded profile / held tool doesn't match the crop actually in front of the player at the start of a run (wrong lane, wrong tool).
+
+**How it works:**
+- For ~1 s after start (after the startup grace so `/warp garden` has finished repositioning), samples the crosshair block against the crop the held tool is meant to harvest — resolved from the tool's **SkyBlock id** via `CropToolMapper.expectedCropBlocks` (Eclipse hoe → sunflower).
+- A majority mismatch triggers.
+- Gated by `BotConfig.isCropCheckEnabled()` (schema v8, default true).
+
+**On failure:** plays an audio alert only — **never stops the bot** (a false positive shouldn't interrupt a good run).
+
+> **Startup grace:** `CheckerController.STARTUP_GRACE_TICKS` (~2 s) suppresses flagging right after start so the warp-induced reposition/reorientation doesn't trip the yaw/pitch or crop checks. Checkers only re-baseline during the grace window.
 
 ---
 
