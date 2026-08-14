@@ -61,7 +61,9 @@ public class CeresConfigScreen {
                     .description(OptionDescription.of(Component.literal(
                         "Command sent at the start of every cycle (including the first) to reposition " +
                         "the player before the path begins. In One Cycle Mode it fires once at the " +
-                        "start only. Leave blank to disable. Do not include the leading /.")))
+                        "start only. Leave blank to disable. Do not include the leading /.\n\n" +
+                        "Rate-limited to at most once every ~3 seconds — this prevents a very short " +
+                        "or unset path (which loop-completes instantly) from spamming the command.")))
                     .binding("warp garden", cfg::getCycleRestartCommand, cfg::setCycleRestartCommand)
                     .controller(StringControllerBuilder::create)
                     .build())
@@ -110,6 +112,34 @@ public class CeresConfigScreen {
                     .line(Component.literal("isn't sending that data, regardless of this setting."))
                     .build())
 
+                .option(ButtonOption.createBuilder()
+                    .name(Component.literal("Edit HUD Position"))
+                    .description(OptionDescription.of(Component.literal(
+                            "Opens the HUD editor: the screen darkens and the HUD panel\n" +
+                            "appears at full colour. Drag it to move, scroll over it to\n" +
+                            "resize, and press Esc to save & close.")))
+                    .text(Component.literal("Open HUD editor"))
+                    .action((screen, opt) -> BotHudRenderer.openEditor())
+                    .build())
+
+                .option(Option.<Boolean>createBuilder()
+                    .name(Component.literal("Show Keybind Hints"))
+                    .description(OptionDescription.of(Component.literal(
+                            "Show the keybind help panel (bottom-right by default).\n" +
+                            "It is its own movable element in the HUD editor.")))
+                    .binding(true, cfg::isKeybindHintsVisible, cfg::setKeybindHintsVisible)
+                    .controller(TickBoxControllerBuilder::create)
+                    .build())
+
+                .option(Option.<Boolean>createBuilder()
+                    .name(Component.literal("Show Log"))
+                    .description(OptionDescription.of(Component.literal(
+                            "Show the log panel. It is now its own movable/scalable element in the HUD\n" +
+                            "editor — drag/scale it separately, or turn it off here to hide it entirely.")))
+                    .binding(true, cfg::isLogVisible, cfg::setLogVisible)
+                    .controller(TickBoxControllerBuilder::create)
+                    .build())
+
                 .option(hudLineOption("profile",    "Profile",    "The name of the currently loaded path profile.", cfg))
                 .option(hudLineOption("area",       "Area",       "Current area read from the tab list.", cfg))
                 .option(hudLineOption("xyz",        "XYZ",        "Player coordinates.", cfg))
@@ -135,10 +165,11 @@ public class CeresConfigScreen {
                 .option(Option.<Integer>createBuilder()
                     .name(Component.literal("Min Pest Count for Alarm"))
                     .description(OptionDescription.of(Component.literal(
-                        "Trigger the pest alarm when the tab-list pest count reaches this number.")))
+                        "Trigger the pest alarm when the tab-list pest count reaches this number.\n" +
+                        "A plot caps at 8 pests, so the range is 1–8.")))
                     .binding(4, cfg::getMinPestCount, cfg::setMinPestCount)
                     .controller(opt -> IntegerSliderControllerBuilder.create(opt)
-                        .range(1, 20)
+                        .range(1, 8)
                         .step(1))
                     .build())
 
@@ -163,8 +194,27 @@ public class CeresConfigScreen {
                 .option(Option.<Boolean>createBuilder()
                     .name(Component.literal("Yaw / Pitch Checker"))
                     .description(OptionDescription.of(Component.literal(
-                        "Alert if the player's rotation drifts more than 1 degree.")))
+                        "If the camera rotation changes unexpectedly (e.g. a server look-check), keep\n" +
+                        "running for ~1 second, then stop with all keys and the mouse freed.")))
                     .binding(true, cfg::isYawPitchCheckerEnabled, cfg::setYawPitchCheckerEnabled)
+                    .controller(BooleanControllerBuilder::create)
+                    .build())
+
+                .option(Option.<Boolean>createBuilder()
+                    .name(Component.literal("Movement Checker"))
+                    .description(OptionDescription.of(Component.literal(
+                        "If the player stops moving for ~2 seconds while the bot should be walking,\n" +
+                        "keep running for ~1 second, then stop with all keys and the mouse freed.")))
+                    .binding(true, cfg::isMovementCheckerEnabled, cfg::setMovementCheckerEnabled)
+                    .controller(BooleanControllerBuilder::create)
+                    .build())
+
+                .option(Option.<Boolean>createBuilder()
+                    .name(Component.literal("Crop Check (on start)"))
+                    .description(OptionDescription.of(Component.literal(
+                        "For ~1 second after starting, verify you're looking at the crop your held\n" +
+                        "tool harvests. If not, play an audio alert — it never stops the bot.")))
+                    .binding(true, cfg::isCropCheckEnabled, cfg::setCropCheckEnabled)
                     .controller(BooleanControllerBuilder::create)
                     .build())
 

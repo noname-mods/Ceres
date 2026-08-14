@@ -4,6 +4,40 @@
 
 ---
 
+## [1.1.4]
+
+Everything since the 1.1.3 hotpatch.
+
+### Added
+- **Crop check.** For ~1s after start, samples the crosshair block against the crop the held tool
+  harvests; a majority mismatch plays an audio alert (never stops the bot) so a wrong-tool-for-this-farm
+  start is caught early. New **Crop Check** toggle.
+- **Movement checker.** Flags and soft-stops when the player's position stalls (~2s). New **Movement
+  Checker** toggle.
+- **HUD editor + split HUD elements.** The main panel, the keybind hints, and the log are now independent,
+  movable/scalable elements via PlayerAPI's shared HUD editor (an **Edit HUD Position** button, plus
+  show/hide toggles for the hints and log). Replaces the old fixed HUD layout.
+
+### Changed
+- **Tool & crop detection now uses the SkyBlock item id.** Tool/crop identity reads the item's stable
+  SkyBlock internal id instead of its display name (which Hypixel renames) — a more durable replacement
+  for the 1.1.3 name-matcher. Requires PlayerAPI 1.18.0+.
+- **Smoother Pest Repellent re-apply.** On a mid-run re-apply the bot stops moving, uses the repellent,
+  swaps **back** to the farming tool, and resumes at human speed — instead of a long pause.
+- **Inventory checker reworked.** Shorter (~3s) check window; the Personal Compactor edge case is handled
+  (samples every 2s, only flags when identical three times in a row); the first ~10s after a stop→start is
+  excluded so a warp/reposition can't false-flag.
+- **Soft-stop behaviour.** Yaw/pitch change, held-item change, and a no-movement stall now "continue ~1s,
+  then stop" (keys released, mouse freed); leaving the farm area is an instant stop. A startup grace period
+  keeps the `/warp garden` reposition from tripping the look/position checks.
+
+### Fixed
+- **Camera snap on stop.** Releasing the mouse lock no longer snaps the camera — accumulated mouse deltas
+  are zeroed while running, plus a brief tab-back guard drops single-frame delta spikes.
+- **Keybind category label.** The Controls-menu category showed a raw translation key; corrected.
+
+---
+
 ## [1.1.3] - 2026-07-10
 ### Fixed
 - **Resource-pack tool names.** The mandatory resource pack renamed the farming tools (Hoe →

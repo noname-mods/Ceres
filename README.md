@@ -19,19 +19,21 @@ Ceres follows a sequence of recorded waypoints while holding the attack key to b
 When you start the bot, Ceres reads your held tool's display name and loads the matching crop profile automatically. A Wheat Sickle loads your Wheat profile; a Carrot Shovel loads Carrot — even reforged tools work because matching is substring-based. Profiles save the full path configuration (both slots + sprint settings) as named files you can switch between at any time.
 
 ### Passive Safety Checkers
-Four independent monitors run continuously while farming:
+Six independent monitors run continuously while farming (each toggleable in the config):
 
 | Checker | Behaviour |
 |---|---|
-| **Inventory** | Watches your hotbar for item changes. If nothing moves for 6 seconds the bot assumes it is stuck and stops. |
-| **Tool** | Detects when your held item changes from what you started with and logs a warning. Does not stop the bot — other systems legitimately switch items. |
-| **Yaw / Pitch** | Detects if an external force rotates the camera unexpectedly. Plays an alert sound and shows a title overlay but keeps farming — the bot is still running. |
+| **Inventory** | Watches your hotbar for changes; if nothing changes across a short (~3s) check it assumes the bot is stuck and stops. The Personal Compactor edge case is handled (samples every 2s, only flags on three identical reads), and the first ~10s after a start is excluded so a warp can't false-flag. |
+| **Tool** | Detects when your held item changes from what you started with (via the item's stable SkyBlock id, not its display name). |
+| **Yaw / Pitch** | Detects if an external force rotates the camera unexpectedly → continues ~1s, then soft-stops (keys released, mouse freed). |
+| **Movement** | Flags when your position stalls (~2s) and soft-stops. |
+| **Crop** | At start, samples the crosshair block against the crop your held tool harvests — a mismatch plays an audio alert (never stops the bot), catching a wrong-tool-for-this-farm start. |
 | **Pest** | Reads the live pest count from the tab list. Plays an alert sound when it reaches your configured threshold. Does not stop the bot. |
 
 The area check is always active regardless of checker toggles: if the tab list shows you have left the Garden, the bot stops immediately and returns full control to you.
 
 ### Pest Repellent Manager
-Reads the "Repellent:" timer from the Hypixel tab list. When it reads "None", Ceres pauses the bot, switches to the repellent in your hotbar, uses it, waits for the tab list to update, and resumes farming — all without you touching anything. Works with all repellent tiers.
+Reads the "Repellent:" timer from the Hypixel tab list. When it reads "None", Ceres stops moving, switches to the repellent in your hotbar, uses it, waits for the tab list to update, then swaps **back** to your farming tool and resumes at human speed — all without you touching anything. Works with all repellent tiers.
 
 ### Live HUD Overlay
 A configurable overlay panel shows up to 14 live rows of farming data pulled directly from the Hypixel tab list:
@@ -44,7 +46,7 @@ A configurable overlay panel shows up to 14 live rows of farming data pulled dir
 - Blocks per second — a 30-second rolling average showing your farming rate
 - Next waypoint coordinates
 
-Every row can be individually shown or hidden in the config screen. A small log panel below the main HUD shows the last 5 bot messages.
+Every row can be individually shown or hidden in the config screen. The main panel, the keybind hints, and the log are **independent movable/scalable elements** — reposition and resize them with the HUD editor (**Edit HUD Position** in the config), or hide the hints/log entirely.
 
 ### Blocks Per Second (BPS) Tracking
 Ceres counts every crop block broken and keeps a rolling 30-second window. The live BPS figure in the HUD reflects your actual throughput, giving you a consistent number to compare across paths and crops.

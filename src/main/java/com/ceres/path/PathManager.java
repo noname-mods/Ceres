@@ -17,6 +17,12 @@ public class PathManager {
 
     private int messUpTimer = 0;
 
+    /** Scheduler tick of the last cycle-start command sent — throttles spammy re-sends. */
+    private long lastCycleCommandTick = Long.MIN_VALUE / 2;
+    /** Minimum ticks between cycle-start commands (~3s). Stops super-short/empty paths from spamming
+     *  the warp command as they loop-complete every tick. */
+    private static final long CYCLE_COMMAND_COOLDOWN_TICKS = 60;
+
     private PathManager() {}
 
     public static PathManager getInstance() {
@@ -157,14 +163,24 @@ public class PathManager {
 
     private void sendCycleStartCommand(BotConfig cfg) {
         String cmd = cfg.getCycleRestartCommand().trim();
-        if (!cmd.isEmpty()) {
-            String cleanCmd = cmd.startsWith("/") ? cmd.substring(1) : cmd;
-            // Small delay so the command fires after any state changes settle
-            Scheduler.schedule(5, () -> {
-                ChatActions.sendCommand(cleanCmd);
-                BotLogger.getInstance().logDebug("PathManager: Sent cycle-start command: " + cleanCmd);
-            });
+        if (cmd.isEmpty()) return;
+
+        // Cooldown: a super-short (or unset) path loop-completes every tick, which would otherwise
+        // re-send the warp command each time. Cap it to at most once per cooldown window.
+        long now = Scheduler.getCurrentTick();
+        if (now - lastCycleCommandTick < CYCLE_COMMAND_COOLDOWN_TICKS) {
+            BotLogger.getInstance().logDebug(
+                    "PathManager: cycle-start command suppressed (cooldown) — path too short?");
+            return;
         }
+        lastCycleCommandTick = now;
+
+        String cleanCmd = cmd.startsWith("/") ? cmd.substring(1) : cmd;
+        // Small delay so the command fires after any state changes settle
+        Scheduler.schedule(5, () -> {
+            ChatActions.sendCommand(cleanCmd);
+            BotLogger.getInstance().logDebug("PathManager: Sent cycle-start command: " + cleanCmd);
+        });
     }
 
 }

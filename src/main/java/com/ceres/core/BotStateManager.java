@@ -33,7 +33,10 @@ public class BotStateManager {
     private boolean guiVisible = false;
     private boolean checksBypassed = false;
     private boolean checkFailed = false;
+    private boolean stopPending = false;
     private String initialTool = "";
+    /** SkyBlock internal id of the tool held at start — the stable identity for the tool-change check. */
+    private String initialToolId = "";
 
     /** Name of the last profile loaded into PathConfig. "Custom" if paths were edited manually. */
     private String activeProfileName = "Custom";
@@ -63,10 +66,12 @@ public class BotStateManager {
         isFollowingPath = false;
         currentPathIndex = 0;
         checkFailed = false;
+        stopPending = false;
         blockBreakTicks.clear();
         runStartTick = Scheduler.getCurrentTick();
         MovementActions.setActive(true);
         initialTool = PlayerInfo.getHeldItem().displayName();
+        initialToolId = PlayerInfo.getHeldItem().skyblockId();
         BotLogger.getInstance().logInfo("Started on " + pathType);
     }
 
@@ -94,6 +99,7 @@ public class BotStateManager {
         isFollowingPath = false;
         currentPathIndex = 0;
         currentPath = null;
+        stopPending = false;
         blockBreakTicks.clear();
         MovementActions.releaseAll();
         MovementActions.setActive(false);
@@ -102,30 +108,40 @@ public class BotStateManager {
     }
 
     /**
+     * Flag-triggered soft stop: keep running for ~1 second, then stop with all keys + the mouse freed.
+     * Used for the yaw/pitch, held-item, and no-movement flags — a brief natural continuation rather
+     * than a dead freeze. The mouse unlocks cleanly (no snap) thanks to the accumulator fix in
+     * {@link com.ceres.mixin.MouseLookMixin}. Idempotent: only the first call arms the stop.
+     */
+    public void requestSoftStop(String reason) {
+        if (currentState != BotState.RUNNING || stopPending) return;
+        stopPending = true;
+        int delay = 40 + (int) (Math.random() * 20); // ~2–3s
+        BotLogger.getInstance().logWarn("Flag (" + reason + ") — stopping in ~" + (delay * 50) + "ms");
+        Scheduler.schedule(delay, this::stopBot);
+    }
+
+    public boolean isStopPending() { return stopPending; }
+
+    /**
      * Area-change stop — used when the player is teleported out of the Garden.
      *
-     * Transitions to STOPPED immediately so MouseLookMixin releases its lock
-     * on the mouse and clicks at once. Bot-scheduled tasks are cancelled, but
-     * movement keys are intentionally NOT released right away: the player coasts
-     * for ~1 second in whatever direction the bot was heading, giving a natural
-     * deceleration and instant full control rather than a dead-freeze.
-     *
-     * After 20 ticks (≈1 second) the held keys are cleared and the movement
-     * input system is fully handed back to the player.
+     * Stops <b>instantly</b>: movement keys stop being held and the mouse unlocks the moment we leave
+     * the Garden. We do NOT force the player's position — the keys simply release, which for players
+     * using area-specific keybinds reads naturally as the keybinds no longer applying. (Was a ~1s coast;
+     * now instant per design.)
      */
     public void emergencyStop() {
         currentState = BotState.STOPPED;
         isFollowingPath = false;
         currentPathIndex = 0;
         currentPath = null;
+        stopPending = false;
         blockBreakTicks.clear();
         Scheduler.cancelAll();
-        // Schedule must come AFTER cancelAll so it is not itself cancelled.
-        Scheduler.schedule(20, () -> {
-            MovementActions.releaseAll();
-            MovementActions.setActive(false);
-        });
-        BotLogger.getInstance().logInfo("Stopped (area change — releasing keys in ~1s)");
+        MovementActions.releaseAll();      // instant — no coast
+        MovementActions.setActive(false);
+        BotLogger.getInstance().logInfo("Stopped (area change — keys released instantly)");
     }
 
     // ── Getters / Setters ─────────────────────────────────────────────────────
@@ -161,6 +177,8 @@ public class BotStateManager {
     public boolean isCheckFailed()                     { return checkFailed; }
     public void setCheckFailed(boolean v)              { checkFailed = v; }
     public String getInitialTool()                     { return initialTool; }
+    public String getInitialToolId()                   { return initialToolId; }
+    public long   getRunStartTick()                    { return runStartTick; }
     public boolean isChecksBypassed()                  { return checksBypassed; }
     public void setChecksBypassed(boolean v)           { checksBypassed = v; }
     public void toggleChecksBypassed()                 { checksBypassed = !checksBypassed; }

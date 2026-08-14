@@ -81,6 +81,7 @@ public class CeresMod implements ClientModInitializer {
         CeresCommands.register();
         registerKeybinds();
 
+        BotHudRenderer.register(); // register the HUD panel with the shared editor
         HudElementRegistry.addLast(
                 Identifier.fromNamespaceAndPath("ceres", "hud"),
                 BotHudRenderer::render);
@@ -136,6 +137,7 @@ public class CeresMod implements ClientModInitializer {
         if (botState == BotState.RUNNING) {
             PathManager.getInstance().tick();
             CheckerController.getInstance().tick(currentTick);
+            com.ceres.checkers.CropChecker.getInstance().tick(currentTick);
             // Heartbeat: re-press attack every second in case it was dropped
             if (currentTick % 20 == 0) {
                 MovementActions.pressKey("attack");
@@ -199,6 +201,7 @@ public class CeresMod implements ClientModInitializer {
             }
         }
         state.startBot(pathType);
+        com.ceres.checkers.CropChecker.getInstance().begin();
     }
 
     private static final KeyMapping.Category CERES_CATEGORY =

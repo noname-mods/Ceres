@@ -1,5 +1,5 @@
 {
-  "key.category.ceres.controls": "Ceres",
+  "key.category.ceres.category": "Ceres",
 
   "key.ceres.toggle_hud":        "Toggle HUD",
   "key.ceres.open_path_editor":  "Open Path Editor",

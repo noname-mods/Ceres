@@ -33,8 +33,10 @@ public class BotConfig {
      *   3 — added hudLines per-row visibility map (all default true)
      *   4 — added updateCheckEnabled (default true)
      *   5 — added rebootAlertEnabled + rebootAlertSound (default true / bell)
+     *   6 — added hudX / hudY / hudScale (shared HUD editor layout)
+     *   7 — added keybindHintsVisible + hints HUD element layout (hintsHudX/Y/Scale, hintsPositioned)
      */
-    private static final int CURRENT_VERSION = 5;
+    private static final int CURRENT_VERSION = 9;
 
     /** All toggleable HUD row keys, in display order. */
     public static final List<String> ALL_HUD_LINES = List.of(
@@ -61,6 +63,8 @@ public class BotConfig {
     private boolean toolCheckerEnabled = true;
     private boolean yawPitchCheckerEnabled = true;
     private boolean pestCheckerEnabled = true;
+    private boolean movementCheckerEnabled = true;
+    private boolean cropCheckEnabled = true;
 
     // ── Cycle mode ────────────────────────────────────────────────────────────
     private boolean oneCycleMode = false;
@@ -80,6 +84,29 @@ public class BotConfig {
     // ── HUD line visibility ────────────────────────────────────────────────────
     /** Per-row visibility flags. Keys are entries from ALL_HUD_LINES. */
     private Map<String, Boolean> hudLines = new LinkedHashMap<>();
+
+    // ── HUD layout (position + scale, edited via the shared HUD editor) ─────────
+    /** Top-left screen position + uniform scale of the Ceres HUD panel. */
+    private float hudX     = 4f;
+    private float hudY     = 4f;
+    private float hudScale = 1.0f;
+
+    // ── Keybind hints panel (separate movable HUD element) ──────────────────────
+    /** Whether the bottom-right keybind-hints panel is shown at all. */
+    private boolean keybindHintsVisible = true;
+    /** Layout of the hints panel. Until {@code hintsPositioned}, it auto-anchors bottom-right. */
+    private float   hintsHudX      = 0f;
+    private float   hintsHudY      = 0f;
+    private float   hintsHudScale  = 1.0f;
+    /** Set true once the user has dragged the hints panel; before that it tracks the screen corner. */
+    private boolean hintsPositioned = false;
+
+    // ── Log panel (its own movable/scalable HUD element) ────────────────────────
+    /** Whether the log panel is shown at all. */
+    private boolean logVisible  = true;
+    private float   logHudX     = 4f;
+    private float   logHudY     = 150f;
+    private float   logHudScale = 1.0f;
 
     // ── Update checker ────────────────────────────────────────────────────────
     private boolean updateCheckEnabled = true;
@@ -183,7 +210,7 @@ public class BotConfig {
                 BotConfig loaded = GSON.fromJson(json, BotConfig.class);
                 if (loaded != null) {
                     this.configVersion             = CURRENT_VERSION;
-                    this.minPestCount              = loaded.minPestCount;
+                    this.minPestCount              = Math.max(1, Math.min(8, loaded.minPestCount));
                     this.logLevel                  = loaded.logLevel;
                     this.sneakOnPathStart          = loaded.sneakOnPathStart;
                     this.repellentReapplyEnabled   = loaded.repellentReapplyEnabled;
@@ -191,6 +218,8 @@ public class BotConfig {
                     this.toolCheckerEnabled        = loaded.toolCheckerEnabled;
                     this.yawPitchCheckerEnabled    = loaded.yawPitchCheckerEnabled;
                     this.pestCheckerEnabled        = loaded.pestCheckerEnabled;
+                    this.movementCheckerEnabled    = loaded.movementCheckerEnabled;
+                    this.cropCheckEnabled          = loaded.cropCheckEnabled;
                     this.oneCycleMode              = loaded.oneCycleMode;
                     this.cycleRestartCommand       = loaded.cycleRestartCommand != null ? loaded.cycleRestartCommand : "";
                     this.autoLoadEnabled           = loaded.autoLoadEnabled;
@@ -208,6 +237,18 @@ public class BotConfig {
                                 loaded.hudLines.getOrDefault(key, true));
                         }
                     }
+                    this.hudX                      = loaded.hudX;
+                    this.hudY                      = loaded.hudY;
+                    this.hudScale                  = loaded.hudScale > 0 ? loaded.hudScale : 1.0f;
+                    this.keybindHintsVisible       = loaded.keybindHintsVisible;
+                    this.hintsHudX                 = loaded.hintsHudX;
+                    this.hintsHudY                 = loaded.hintsHudY;
+                    this.hintsHudScale             = loaded.hintsHudScale > 0 ? loaded.hintsHudScale : 1.0f;
+                    this.hintsPositioned           = loaded.hintsPositioned;
+                    this.logVisible                = loaded.logVisible;
+                    this.logHudX                   = loaded.logHudX;
+                    this.logHudY                   = loaded.logHudY;
+                    this.logHudScale               = loaded.logHudScale > 0 ? loaded.logHudScale : 1.0f;
                     this.updateCheckEnabled        = loaded.updateCheckEnabled;
                     this.rebootAlertEnabled        = loaded.rebootAlertEnabled;
                     this.bypassAreaCheck           = loaded.bypassAreaCheck;
@@ -266,6 +307,10 @@ public class BotConfig {
         if (version < 3) json = migrateV2toV3(json);
         if (version < 4) json = migrateV3toV4(json);
         if (version < 5) json = migrateV4toV5(json);
+        if (version < 6) json = migrateV5toV6(json);
+        if (version < 7) json = migrateV6toV7(json);
+        if (version < 8) json = migrateV7toV8(json);
+        if (version < 9) json = migrateV8toV9(json);
 
         json.addProperty("configVersion", CURRENT_VERSION);
         BotLogger.getInstance().logInfo("BotConfig: loaded (schema v" + version
@@ -350,10 +395,47 @@ public class BotConfig {
         return json;
     }
 
+    /**
+     * v5 → v6: added HUD layout fields. Inject the current default position/scale so an upgraded
+     * config keeps the panel where it was (top-left, 1.0x) — and, critically, so hudScale is never
+     * left as GSON's 0.0 (which would render the panel invisibly small).
+     */
+    private static JsonObject migrateV5toV6(JsonObject json) {
+        if (!json.has("hudX"))     json.addProperty("hudX", 4.0f);
+        if (!json.has("hudY"))     json.addProperty("hudY", 4.0f);
+        if (!json.has("hudScale")) json.addProperty("hudScale", 1.0f);
+        return json;
+    }
+
+    /**
+     * v6 → v7: added the keybind-hints toggle + its own HUD element layout. hintsPositioned defaults
+     * false (so the panel keeps auto-anchoring bottom-right until the user drags it); hintsHudScale
+     * must be injected as 1.0 so it is never GSON's 0.0.
+     */
+    private static JsonObject migrateV6toV7(JsonObject json) {
+        if (!json.has("keybindHintsVisible")) json.addProperty("keybindHintsVisible", true);
+        if (!json.has("hintsHudScale"))       json.addProperty("hintsHudScale", 1.0f);
+        return json;
+    }
+
+    private static JsonObject migrateV7toV8(JsonObject json) {
+        if (!json.has("movementCheckerEnabled")) json.addProperty("movementCheckerEnabled", true);
+        if (!json.has("cropCheckEnabled"))       json.addProperty("cropCheckEnabled", true);
+        return json;
+    }
+
+    private static JsonObject migrateV8toV9(JsonObject json) {
+        if (!json.has("logVisible"))  json.addProperty("logVisible", true);
+        if (!json.has("logHudScale")) json.addProperty("logHudScale", 1.0f);
+        if (!json.has("logHudY"))     json.addProperty("logHudY", 150f);
+        return json;
+    }
+
     // ── Getters / Setters ─────────────────────────────────────────────────────
 
     public int getMinPestCount() { return minPestCount; }
-    public void setMinPestCount(int v) { minPestCount = Math.max(1, v); save(); }
+    // A plot maxes at 8 pests; alerting at 0 is pointless — clamp to 1–8.
+    public void setMinPestCount(int v) { minPestCount = Math.max(1, Math.min(8, v)); save(); }
 
     public int getLogLevel() { return logLevel; }
     public void setLogLevel(int v) {
@@ -380,6 +462,12 @@ public class BotConfig {
     public boolean isPestCheckerEnabled() { return pestCheckerEnabled; }
     public void setPestCheckerEnabled(boolean v) { pestCheckerEnabled = v; save(); }
 
+    public boolean isMovementCheckerEnabled() { return movementCheckerEnabled; }
+    public void setMovementCheckerEnabled(boolean v) { movementCheckerEnabled = v; save(); }
+
+    public boolean isCropCheckEnabled() { return cropCheckEnabled; }
+    public void setCropCheckEnabled(boolean v) { cropCheckEnabled = v; save(); }
+
     public boolean isOneCycleMode() { return oneCycleMode; }
     public void setOneCycleMode(boolean v) { oneCycleMode = v; save(); }
 
@@ -400,6 +488,50 @@ public class BotConfig {
     public void setMicroLookEnabled(boolean v) {
         microLookEnabled = v;
         HumanProfile.getInstance().enableMicroLook = v;
+        save();
+    }
+
+    public float getHudX()     { return hudX; }
+    public float getHudY()     { return hudY; }
+    public float getHudScale() { return hudScale; }
+
+    /** Persists the HUD panel's position + scale in one write (called when the editor closes). */
+    public void setHudLayout(float x, float y, float scale) {
+        this.hudX = x;
+        this.hudY = y;
+        this.hudScale = scale > 0 ? scale : 1.0f;
+        save();
+    }
+
+    public boolean isKeybindHintsVisible() { return keybindHintsVisible; }
+    public void setKeybindHintsVisible(boolean v) { keybindHintsVisible = v; save(); }
+
+    public float getHintsHudX()     { return hintsHudX; }
+    public float getHintsHudY()     { return hintsHudY; }
+    public float getHintsHudScale() { return hintsHudScale; }
+    public boolean isHintsPositioned() { return hintsPositioned; }
+
+    /** Persists the hints panel's position + scale, and marks it as user-positioned (stops auto-anchoring). */
+    public void setHintsLayout(float x, float y, float scale) {
+        this.hintsHudX = x;
+        this.hintsHudY = y;
+        this.hintsHudScale = scale > 0 ? scale : 1.0f;
+        this.hintsPositioned = true;
+        save();
+    }
+
+    public boolean isLogVisible() { return logVisible; }
+    public void setLogVisible(boolean v) { logVisible = v; save(); }
+
+    public float getLogHudX()     { return logHudX; }
+    public float getLogHudY()     { return logHudY; }
+    public float getLogHudScale() { return logHudScale; }
+
+    /** Persists the log panel's position + scale (called when the editor closes). */
+    public void setLogLayout(float x, float y, float scale) {
+        this.logHudX = x;
+        this.logHudY = y;
+        this.logHudScale = scale > 0 ? scale : 1.0f;
         save();
     }
 
