@@ -4,6 +4,15 @@
 
 ---
 
+## [1.1.5] - 2026-08-22
+
+### Changed
+- **Minecraft 26.2** support.
+- **New config screen** — Ceres now uses PlayerAPI's built-in config library; the **YACL** dependency is gone.
+- Requires **PlayerAPI 2.0.0**.
+
+---
+
 ## [1.1.4]
 
 Everything since the 1.1.3 hotpatch.

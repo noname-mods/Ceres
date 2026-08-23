@@ -6,6 +6,18 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.playerapi.HumanProfile;
 import com.playerapi.SoundActions;
+import com.playerapi.config.annotations.Button;
+import com.playerapi.config.annotations.ConfigAccordion;
+import com.playerapi.config.annotations.ConfigLayout;
+import com.playerapi.config.annotations.ConfigMapToggles;
+import com.playerapi.config.annotations.ConfigOption;
+import com.playerapi.config.annotations.Dropdown;
+import com.playerapi.config.annotations.OnChange;
+import com.playerapi.config.annotations.ShowIf;
+import com.playerapi.config.annotations.Slider;
+import com.playerapi.config.annotations.TextField;
+import com.playerapi.config.annotations.Toggle;
+import com.playerapi.config.theme.ConfigStyle;
 import net.fabricmc.loader.api.FabricLoader;
 
 import java.io.Reader;
@@ -16,6 +28,15 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+@ConfigLayout({
+        @ConfigLayout.Category(name = "Bot Settings"),
+        @ConfigLayout.Category(name = "Checkers"),
+        @ConfigLayout.Category(name = "Auto-Load"),
+        @ConfigLayout.Category(name = "HUD"),
+        @ConfigLayout.Category(name = "Sounds"),
+        @ConfigLayout.Category(name = "Updates"),
+        @ConfigLayout.Category(name = "Developer", color = 0xFFFF5555),
+})
 public class BotConfig {
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -53,37 +74,80 @@ public class BotConfig {
     private int configVersion = CURRENT_VERSION;
 
     // ── Bot settings ──────────────────────────────────────────────────────────
+    @ConfigOption(category = "Checkers", name = "Min Pest Count for Alarm", desc = "Alert when pests reach this count.")
+    @Slider(min = 1, max = 8, step = 1)
     private int minPestCount = 4;
+    @ConfigOption(category = "Developer", name = "Log Level", desc = "0=error, 1=warn, 2=info, 3=debug.")
+    @Slider(min = 0, max = 3, step = 1)
+    @OnChange("onLogLevelChanged")
     private int logLevel = BotLogger.LEVEL_WARN;
+    @ConfigOption(category = "Bot Settings", name = "Sneak on Path Start", desc = "Hold sneak briefly when a path begins.")
+    @Toggle
     private boolean sneakOnPathStart = true;
+    @ConfigOption(category = "Bot Settings", name = "Pest Repellent Reapply", desc = "Auto-use Pest Repellent when it expires.")
+    @Toggle
     private boolean repellentReapplyEnabled = true;
 
     // ── Checker toggles ───────────────────────────────────────────────────────
+    @ConfigOption(category = "Checkers", name = "Inventory Checker", desc = "Alert if the inventory stops changing.")
+    @Toggle
     private boolean inventoryCheckerEnabled = true;
+    @ConfigOption(category = "Checkers", name = "Tool Checker", desc = "Alert if the held tool changes.")
+    @Toggle
     private boolean toolCheckerEnabled = true;
+    @ConfigOption(category = "Checkers", name = "Yaw / Pitch Checker", desc = "Alert on unexpected look changes.")
+    @Toggle
     private boolean yawPitchCheckerEnabled = true;
+    @ConfigOption(category = "Checkers", name = "Pest Checker", desc = "Stop when pests reach the threshold.")
+    @Toggle
     private boolean pestCheckerEnabled = true;
+    @ConfigOption(category = "Checkers", name = "Movement Checker", desc = "Stop if the player stops moving.")
+    @Toggle
     private boolean movementCheckerEnabled = true;
+    @ConfigOption(category = "Checkers", name = "Crop Check (on start)", desc = "Warn if the crop under you doesn't match the tool.")
+    @Toggle
     private boolean cropCheckEnabled = true;
 
     // ── Cycle mode ────────────────────────────────────────────────────────────
+    @ConfigOption(category = "Bot Settings", name = "One Cycle Mode", desc = "Stop (or restart) after a single path cycle.")
+    @Toggle
     private boolean oneCycleMode = false;
+    @ConfigOption(category = "Bot Settings", name = "Cycle Start Command", desc = "Command run to restart a cycle.")
+    @TextField
+    @ShowIf("oneCycleMode")
     private String cycleRestartCommand = "warp garden";
 
     // ── Alarm sounds ──────────────────────────────────────────────────────────
+    @ConfigOption(category = "Sounds", name = "Cycle Complete", desc = "Plays when a cycle finishes.")
+    @ConfigAccordion(expanded = false)
     private AlarmSound cycleCompleteSound = AlarmSound.defaultStop();
+    @ConfigOption(category = "Sounds", name = "Stop Alert", desc = "Plays when a checker stops the bot.")
+    @ConfigAccordion(expanded = false)
     private AlarmSound stopAlertSound     = AlarmSound.defaultStop();
+    @ConfigOption(category = "Sounds", name = "Warn Alert", desc = "Plays on a non-stopping warning.")
+    @ConfigAccordion(expanded = false)
     private AlarmSound warnAlertSound     = AlarmSound.defaultWarn();
+    @ConfigOption(category = "Sounds", name = "Reboot Alert", desc = "Loops on the server-reboot warning.")
+    @ConfigAccordion(expanded = false)
     private AlarmSound rebootAlertSound   = AlarmSound.defaultReboot();
 
     // ── Auto-load ─────────────────────────────────────────────────────────────
+    @ConfigOption(category = "Auto-Load", name = "Enable Auto-Load", desc = "Load the profile matching your held tool on start.")
+    @Toggle
     private boolean autoLoadEnabled = true;
     /** Per-crop enable flags. Keys are profile names from CropToolMapper.ALL_CROPS. */
+    @ConfigMapToggles(category = "Auto-Load", subcategory = "Crops")
     private Map<String, Boolean> autoLoadCrops = new LinkedHashMap<>();
 
     // ── HUD line visibility ────────────────────────────────────────────────────
     /** Per-row visibility flags. Keys are entries from ALL_HUD_LINES. */
+    @ConfigMapToggles(category = "HUD", subcategory = "Lines")
     private Map<String, Boolean> hudLines = new LinkedHashMap<>();
+
+    // ── HUD panel buttons/toggles ───────────────────────────────────────────────
+    @ConfigOption(category = "HUD", name = "Edit HUD Position", desc = "Move/scale the HUD panels.")
+    @Button(text = "Open HUD editor")
+    public transient final Runnable editHudAction = () -> com.ceres.gui.BotHudRenderer.openEditor();
 
     // ── HUD layout (position + scale, edited via the shared HUD editor) ─────────
     /** Top-left screen position + uniform scale of the Ceres HUD panel. */
@@ -91,10 +155,10 @@ public class BotConfig {
     private float hudY     = 4f;
     private float hudScale = 1.0f;
 
-    // ── Keybind hints panel (separate movable HUD element) ──────────────────────
-    /** Whether the bottom-right keybind-hints panel is shown at all. */
+    // ── Keybind hints panel — REMOVED from the HUD (2026-08-16). Fields kept only so old
+    //    config.json files still load cleanly; no longer shown, rendered, or editable. ──────────
     private boolean keybindHintsVisible = true;
-    /** Layout of the hints panel. Until {@code hintsPositioned}, it auto-anchors bottom-right. */
+    /** Unused (legacy layout of the removed hints panel). */
     private float   hintsHudX      = 0f;
     private float   hintsHudY      = 0f;
     private float   hintsHudScale  = 1.0f;
@@ -103,20 +167,38 @@ public class BotConfig {
 
     // ── Log panel (its own movable/scalable HUD element) ────────────────────────
     /** Whether the log panel is shown at all. */
+    @ConfigOption(category = "HUD", name = "Show Log", desc = "Show the scrolling log panel.")
+    @Toggle
     private boolean logVisible  = true;
     private float   logHudX     = 4f;
     private float   logHudY     = 150f;
     private float   logHudScale = 1.0f;
 
     // ── Update checker ────────────────────────────────────────────────────────
+    @ConfigOption(category = "Updates", name = "Update Check", desc = "On world join, check GitHub for a newer release.")
+    @Toggle
     private boolean updateCheckEnabled = true;
 
     // ── Reboot alert ──────────────────────────────────────────────────────────
+    @ConfigOption(category = "Sounds", name = "Enable Reboot Alert", desc = "Play the reboot alarm on the server-restart warning.")
+    @Toggle
     private boolean rebootAlertEnabled = true;
 
+    // ── HUD style ───────────────────────────────────────────────────────────────
+    @ConfigOption(category = "HUD", name = "HUD Style",
+            desc = "Live HUD look: Custom textured panels, a toned-down transparent look, or plain flat colours.")
+    @Dropdown
+    private ConfigStyle hudStyle = ConfigStyle.CUSTOM;
+
     // ── Developer ─────────────────────────────────────────────────────────────
+    @ConfigOption(category = "Developer", name = "Bypass Area Check", desc = "Skip the Garden-area safety gate.")
+    @Toggle
     private boolean bypassAreaCheck = false;
+    @ConfigOption(category = "Developer", name = "Micro Look", desc = "Tiny idle look movements (anti-AFK experiment).")
+    @Toggle
     private boolean microLookEnabled = false;
+    @ConfigOption(category = "Developer", name = "Debug Mode", desc = "Extra diagnostics.")
+    @Toggle
     private boolean debugMode = false;
 
     private BotConfig() {
@@ -134,6 +216,12 @@ public class BotConfig {
         return INSTANCE;
     }
 
+    /** Chosen live-HUD style (never null). */
+    public ConfigStyle getHudStyle() {
+        return hudStyle == null ? ConfigStyle.CUSTOM : hudStyle;
+    }
+
+
     // ── AlarmSound data class ─────────────────────────────────────────────────
 
     /**
@@ -143,10 +231,20 @@ public class BotConfig {
      * Example: "minecraft:entity.player.levelup"
      */
     public static class AlarmSound {
+        @ConfigOption(name = "Sound ID", desc = "e.g. minecraft:entity.player.levelup")
+        @TextField
         public String soundId;
+        @ConfigOption(name = "Volume", desc = "0.1 – 2.0")
+        @Slider(min = 0.1, max = 2.0, step = 0.1)
         public double volume;          // 0.1 – 2.0
+        @ConfigOption(name = "Pitch", desc = "0.5 – 2.0 (lower = deeper)")
+        @Slider(min = 0.5, max = 2.0, step = 0.1)
         public double pitch;           // 0.5 – 2.0 (lower = slower and deeper)
+        @ConfigOption(name = "Duration (s)", desc = "Total seconds the alarm plays (0 = once)")
+        @Slider(min = 0, max = 30, step = 1)
         public int    durationSeconds; // 0 – 30 seconds total alarm duration
+        @ConfigOption(name = "Interval (ticks)", desc = "Ticks between plays")
+        @Slider(min = 5, max = 60, step = 5)
         public int    intervalTicks;   // 5 – 60 ticks between each play
 
         public AlarmSound() {}
@@ -254,6 +352,7 @@ public class BotConfig {
                     this.bypassAreaCheck           = loaded.bypassAreaCheck;
                     this.microLookEnabled          = loaded.microLookEnabled;
                     this.debugMode                 = loaded.debugMode;
+                    this.hudStyle                  = loaded.hudStyle != null ? loaded.hudStyle : ConfigStyle.CUSTOM;
 
                     if (loaded.cycleCompleteSound != null)
                         this.cycleCompleteSound.mergeFrom(loaded.cycleCompleteSound, AlarmSound.defaultStop());
@@ -438,6 +537,11 @@ public class BotConfig {
     public void setMinPestCount(int v) { minPestCount = Math.max(1, Math.min(8, v)); save(); }
 
     public int getLogLevel() { return logLevel; }
+    /** {@code @OnChange} hook: the config screen edits the field directly, so re-apply to the logger. */
+    public void onLogLevelChanged() {
+        BotLogger.getInstance().setLogLevel(logLevel);
+    }
+
     public void setLogLevel(int v) {
         logLevel = v;
         BotLogger.getInstance().setLogLevel(v);

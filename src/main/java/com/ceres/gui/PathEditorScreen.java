@@ -461,7 +461,7 @@ public class PathEditorScreen extends Screen {
             BotStateManager.getInstance().setActiveProfileName(profileForHud);
         }
 
-        this.minecraft.setScreen(null);
+        this.minecraft.gui.setScreen(null);
     }
 
     @Override

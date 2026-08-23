@@ -6,6 +6,9 @@ import com.ceres.core.BotState;
 import com.ceres.core.BotStateManager;
 import com.ceres.path.PathType;
 import com.ceres.path.Waypoint;
+import com.playerapi.config.theme.ConfigStyle;
+import com.playerapi.config.theme.Surface;
+import com.playerapi.config.theme.ThemeRenderer;
 import com.playerapi.hud.HudElement;
 import com.playerapi.hud.HudManager;
 import com.playerapi.hud.HudTransform;
@@ -14,6 +17,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.resources.Identifier;
 
 import java.util.List;
 
@@ -28,7 +33,15 @@ public class BotHudRenderer {
     private static final int LABEL_COL   = 0xFF666666;
     private static final int VALUE_COL   = 0xFFCCCCCC;
     private static final int LOG_BG      = 0x90000000;
-    private static final int HINT_COL    = 0x88888888;
+
+    // Textured styles use a LIGHT stone panel, so text is dark-on-light (matches the reference kit).
+    private static final int D_LABEL = 0xFF5A4A38; // dark warm-brown labels
+    private static final int D_VALUE = 0xFF2A2418; // near-black values
+    private static final int D_TITLE = 0xFF3A2A16; // dark title on the stone plaque
+    // Status colours remapped to read on light stone.
+    private static final int D_GREEN = 0xFF2E8B3A;
+    private static final int D_RED   = 0xFFB63A2C;
+    private static final int D_AMBER = 0xFFB77400;
 
     // Panel is drawn from local origin (0,0); screen position + scale come from the HudTransform.
     private static final int PX      = 0;
@@ -42,21 +55,130 @@ public class BotHudRenderer {
     private static final int LX_OFF  = 7;
     private static final int VX_OFF  = 60;
 
+    // ── HUD style (Custom / Toned Down / Flat) — drives how panels are drawn ─────
+    /** Chunky bright farm panel (Custom) + a muted transparent one (Toned Down); header plaque. */
+    private static final Surface PANEL       = Surface.nineSlice(hudTex("hud_panel"), 64, 11);
+    private static final Surface PANEL_TONED = Surface.nineSlice(hudTex("hud_panel_toned"), 64, 11);
+    private static final Surface HEADER_BAND = Surface.nineSlice(hudTex("hud_header"), 32, 8);
+    /** Decorative corner props (Custom only) — "mini notes thrown around to complete the look." */
+    private static final Identifier PROP_LEAVES = hudTex("prop_leaves");
+    private static final Identifier PROP_WHEAT  = hudTex("prop_wheat");
+    private static final Identifier PROP_CARROT = hudTex("prop_carrot");
+    private static final Identifier PROP_FLOWER = hudTex("prop_flower");
+    private static final int PROP = 16;   // drawn prop size (smaller so it tucks into the corner)
+    private static final int PROP_TEX = 32; // prop texture size
+    private static final int PROP_OH = 4;   // corner overhang
+
+    private static Identifier hudTex(String name) {
+        return Identifier.fromNamespaceAndPath("playerapi", "textures/config/ceres/" + name + ".png");
+    }
+
+    private static ConfigStyle style() {
+        return BotConfig.getInstance().getHudStyle();
+    }
+
+    /** Draw a panel background in the current HUD style: textured (Custom/Toned) or a flat colour fill. */
+    private static void drawBg(GuiGraphicsExtractor ctx, int x, int y, int w, int h, int flatColor) {
+        switch (style()) {
+            case CUSTOM     -> ThemeRenderer.surface(ctx, PANEL, flatColor, x, y, w, h);
+            case TONED_DOWN -> ThemeRenderer.surface(ctx, PANEL_TONED, flatColor, x, y, w, h);
+            case FLAT       -> fill(ctx, x, y, w, h, flatColor);
+        }
+    }
+
+    /** Inset for the accent stripe so it sits inside the textured panel's rounded frame. */
+    private static int accentInset() {
+        return style() == ConfigStyle.FLAT ? 0 : 4;
+    }
+
+    /** Draw the left accent stripe, inset within the frame. Skipped in Custom (state shows in the header). */
+    private static void drawAccent(GuiGraphicsExtractor ctx, int x, int y, int h, int color) {
+        if (isCustom()) return;
+        int ai = accentInset();
+        fill(ctx, x + ai, y + ai, ACCENT, h - 2 * ai, color);
+    }
+
+    /** Frame inset: content is pushed in by this many px on textured panels so text clears the frame bevel. */
+    private static int fi() { return isTextured() ? 6 : 0; }
+
+    /** Draw the header band (height {@code h}): a stone plaque (Custom) or the flat tint + divider. */
+    private static void drawHeader(GuiGraphicsExtractor ctx, int x, int y, int w, int h, int tint, int divider) {
+        int f = fi();
+        int hx = x + ACCENT + f, hw = w - ACCENT - ACCENT - f * 2;
+        if (style() == ConfigStyle.CUSTOM) {
+            ThemeRenderer.surface(ctx, HEADER_BAND, tint, hx, y + f, hw, h - f);
+        } else {
+            fill(ctx, hx, y, hw, HEADER, tint);
+            fill(ctx, hx, y + HEADER, hw, 1, divider);
+        }
+    }
+
+    /** Blit a square sprite (respects PNG alpha). */
+    private static void sprite(GuiGraphicsExtractor ctx, Identifier id, int x, int y, int size) {
+        ctx.blit(RenderPipelines.GUI_TEXTURED, id, x, y, 0f, 0f, size, size, PROP_TEX, PROP_TEX, PROP_TEX, PROP_TEX);
+    }
+
+    /** Draw the four decorative corner props overhanging a panel of size {@code w×h} (Custom only). */
+    private static void drawProps(GuiGraphicsExtractor ctx, int x, int y, int w, int h) {
+        if (style() != ConfigStyle.CUSTOM) return;
+        int d = PROP, o = PROP_OH;
+        sprite(ctx, PROP_LEAVES, x - o,             y - o,             d);
+        sprite(ctx, PROP_WHEAT,  x + w - d + o,      y - o,             d);
+        sprite(ctx, PROP_CARROT, x - o,             y + h - d + o,      d);
+        sprite(ctx, PROP_FLOWER, x + w - d + o,      y + h - d + o,      d);
+    }
+
+    // ── Style-aware text ─────────────────────────────────────────────────────────
+    /** Custom + Toned both render on the light stone panel → dark-on-light text. Flat keeps the classic look. */
+    private static boolean isTextured()   { return style() == ConfigStyle.CUSTOM || style() == ConfigStyle.TONED_DOWN; }
+    private static boolean isCustom()      { return style() == ConfigStyle.CUSTOM; }
+    private static boolean shadow()        { return false; } // dark text on light stone needs no shadow
+    private static int     labelCol()      { return isTextured() ? D_LABEL : LABEL_COL; }
+    private static int     titleCol()      { return isTextured() ? D_TITLE : 0xFFAAAAAA; }
+
+    /** Remap a per-row value colour to a light-stone-readable one for textured styles; pass through on Flat. */
+    private static int mapVal(int c) {
+        if (!isTextured()) return c;
+        return switch (c) {
+            case VALUE_COL, 0xFFFFFFFF -> D_VALUE;   // neutral/white → near-black
+            case 0xFF44EE44            -> D_GREEN;   // status green
+            case 0xFFEE4444            -> D_RED;     // status red
+            case 0xFFFFAA00            -> D_AMBER;   // status amber
+            case 0xFF007700            -> D_GREEN;   // dark green (active) → readable green
+            case 0xFF888888            -> 0xFF6A6055; // grey → warm grey
+            default                    -> c;
+        };
+    }
+
+    /** Bot-state colour, remapped to read on the light stone panel for textured styles. */
+    private static int stateColour(BotState s) {
+        if (isTextured()) return switch (s) { case RUNNING -> D_GREEN; case PAUSED -> D_AMBER; case STOPPED -> D_RED; };
+        return switch (s) { case RUNNING -> 0xFF44EE44; case PAUSED -> 0xFFFFAA00; case STOPPED -> 0xFFEE4444; };
+    }
+
+    /**
+     * State indicator top-right: on the stone panel a small rounded status <b>pill</b> (colour = state)
+     * with white text — a clean badge; on Flat the classic coloured word. {@code rightX} = right anchor.
+     */
+    private static void drawState(GuiGraphicsExtractor ctx, Font tr, int rightX, int y, String label, int stateCol) {
+        int tw = tr.width(label);
+        if (isTextured()) {
+            int padX = 4, h = tr.lineHeight + 1, w = tw + padX * 2, x = rightX - w, by = y - 1;
+            fill(ctx, x + 1, by, w - 2, h, stateCol);          // pill body
+            fill(ctx, x, by + 1, 1, h - 2, stateCol);          // fake-rounded left edge
+            fill(ctx, x + w - 1, by + 1, 1, h - 2, stateCol);  // right edge
+            ctx.text(tr, label, x + padX, y, 0xFFFFFFFF, false);
+        } else {
+            ctx.text(tr, label, rightX - tw, y, stateCol, false);
+        }
+    }
+
     /** Last computed main-panel height, cached for the editor's outline/hit-box. */
     private static int lastPanelHeight = HEADER + 1 + PAD + 5 * LINE + PAD;
     /** Last computed log-panel height, cached for the editor's outline/hit-box. */
     private static int lastLogHeight = HEADER + 1 + 5 * 9 + 4;
     /** Max log lines shown in the panel. */
     private static final int MAX_LOG = 5;
-
-    // Keybind hints panel (a separate movable element).
-    private static final String[] HINTS = {
-            "O=Primary  U=Secondary", "P=Pause  J=Resume  K=Stop", "I=Paths  ;=Toggle HUD" };
-    private static final int HINT_LINE_H = 10;
-    private static final int HINT_PAD    = 4;
-
-    /** Live transform of the hints panel — kept so it can auto-anchor before the user positions it. */
-    private static HudTransform hintsTransform;
 
     private BotHudRenderer() {}
 
@@ -65,7 +187,7 @@ public class BotHudRenderer {
     /**
      * Registers the HUD panel as a movable/scalable element with the shared editor. Call once at
      * mod init (after config load). The transform is backed by {@link BotConfig}; closing the editor
-     * persists it. (The bottom-right keybind hint panel is intentionally not editable.)
+     * persists it.
      */
     public static void register() {
         BotConfig cfg = BotConfig.getInstance();
@@ -73,17 +195,12 @@ public class BotHudRenderer {
         HudTransform panel = new HudTransform(cfg.getHudX(), cfg.getHudY(), cfg.getHudScale());
         HudManager.register(HUD_OWNER, PANEL_ELEMENT, panel);
 
-        hintsTransform = new HudTransform(cfg.getHintsHudX(), cfg.getHintsHudY(), cfg.getHintsHudScale());
-        HudManager.register(HUD_OWNER, HINTS_ELEMENT, hintsTransform);
-
         HudTransform log = new HudTransform(cfg.getLogHudX(), cfg.getLogHudY(), cfg.getLogHudScale());
         HudManager.register(HUD_OWNER, LOG_ELEMENT, log);
 
         HudManager.onSave(HUD_OWNER, () -> {
             HudTransform pt = HudManager.transformOf(HUD_OWNER, PANEL_ELEMENT.id());
             if (pt != null) cfg.setHudLayout(pt.getX(), pt.getY(), pt.getScale());
-            HudTransform ht = HudManager.transformOf(HUD_OWNER, HINTS_ELEMENT.id());
-            if (ht != null) cfg.setHintsLayout(ht.getX(), ht.getY(), ht.getScale());
             HudTransform lt = HudManager.transformOf(HUD_OWNER, LOG_ELEMENT.id());
             if (lt != null) cfg.setLogLayout(lt.getX(), lt.getY(), lt.getScale());
         });
@@ -91,21 +208,7 @@ public class BotHudRenderer {
 
     /** Opens the shared HUD editor scoped to Ceres's HUD. */
     public static void openEditor() {
-        ensureHintsDefaultPositioned();
         HudManager.openEditor(HUD_OWNER);
-    }
-
-    /**
-     * Until the user drags the hints panel, keep it anchored to the bottom-right corner (its old
-     * fixed home). Recomputed each frame while unpositioned so it tracks window resizes; once the
-     * user moves it in the editor, {@code hintsPositioned} sticks and this becomes a no-op.
-     */
-    private static void ensureHintsDefaultPositioned() {
-        if (hintsTransform == null || BotConfig.getInstance().isHintsPositioned()) return;
-        Minecraft client = Minecraft.getInstance();
-        int hw = client.getWindow().getGuiScaledWidth();
-        int hh = client.getWindow().getGuiScaledHeight();
-        hintsTransform.moveTo(hw - hintPanelWidth() - 4, hh - hintPanelHeight() - 4);
     }
 
     /** The Ceres HUD panel as a single editor element (main panel + trailing log, coupled for now). */
@@ -117,24 +220,6 @@ public class BotHudRenderer {
         @Override public int height() { return lastPanelHeight; }
         @Override public void render(GuiGraphicsExtractor ctx, boolean preview) { drawPanel(ctx); }
         @Override public void resetTransform(HudTransform t) { t.moveTo(4f, 4f); t.setScale(1f); } // default: top-left
-    };
-
-    /** The keybind-hints panel as its own movable element — hidden when the config toggle is off. */
-    private static final HudElement HINTS_ELEMENT = new HudElement() {
-        @Override public String id() { return "hints"; }
-        @Override public String displayName() { return "Keybind Hints"; }
-        @Override public boolean isEnabled() { return BotConfig.getInstance().isKeybindHintsVisible(); }
-        @Override public int width()  { return hintPanelWidth(); }
-        @Override public int height() { return hintPanelHeight(); }
-        @Override public void render(GuiGraphicsExtractor ctx, boolean preview) { drawHints(ctx); }
-        @Override public void resetTransform(HudTransform t) {
-            // Default: bottom-right corner.
-            Minecraft client = Minecraft.getInstance();
-            int hw = client.getWindow().getGuiScaledWidth();
-            int hh = client.getWindow().getGuiScaledHeight();
-            t.moveTo(hw - hintPanelWidth() - 4, hh - hintPanelHeight() - 4);
-            t.setScale(1f);
-        }
     };
 
     /** The log panel as its own movable element — hidden when the config toggle is off. */
@@ -157,8 +242,7 @@ public class BotHudRenderer {
         Minecraft client = Minecraft.getInstance();
         if (client.player == null) return;
 
-        ensureHintsDefaultPositioned();
-        HudManager.render(HUD_OWNER, ctx); // main panel + log, and hints (if enabled)
+        HudManager.render(HUD_OWNER, ctx); // main panel + log
     }
 
     // ── Main panel + log (drawn from local origin) ──────────────────────────────
@@ -172,11 +256,7 @@ public class BotHudRenderer {
         LocalPlayer p   = client.player;
         BotState botState = state.getCurrentState();
 
-        int stateCol = switch (botState) {
-            case RUNNING -> 0xFF44EE44;
-            case PAUSED  -> 0xFFFFAA00;
-            case STOPPED -> 0xFFEE4444;
-        };
+        int stateCol = stateColour(botState);
 
         BotConfig cfg = BotConfig.getInstance();
 
@@ -214,21 +294,22 @@ public class BotHudRenderer {
         }
         if (hasTarget && cfg.isHudLineVisible("target")) contentRows++;
 
-        int ph = HEADER + 1 + PAD + contentRows * LINE + PAD;
+        int fi = fi();
+        int hdr = HEADER + fi;                          // taller header on textured (room below the frame)
+        int prop = isCustom() ? 6 : 0;                  // extra nudge so header text clears the corner props
+        int ph = hdr + 1 + PAD + contentRows * LINE + PAD + fi;
         lastPanelHeight = ph; // cache for the editor's outline/hit-box
 
-        fill(ctx, PX,        PY,        PW,  ph, BG);
-        fill(ctx, PX,        PY,        ACCENT, ph, stateCol);
-        fill(ctx, PX+ACCENT, PY,        PW-ACCENT, HEADER, HEADER_TINT);
-        fill(ctx, PX+ACCENT, PY+HEADER, PW-ACCENT, 1, DIVIDER);
+        drawBg(ctx, PX, PY, PW, ph, BG);
+        drawAccent(ctx, PX, PY, ph, stateCol);
+        drawHeader(ctx, PX, PY, PW, hdr, HEADER_TINT, DIVIDER);
 
-        ctx.text(tr, "Ceres", PX + LX_OFF, PY + 3, 0xFFAAAAAA, false);
-        String sn = botState.name();
-        ctx.text(tr, sn, PX + PW - tr.width(sn) - 5, PY + 3, stateCol, false);
+        ctx.text(tr, "Ceres", PX + LX_OFF + fi + prop + 5, PY + fi + 3, titleCol(), shadow());
+        drawState(ctx, tr, PX + PW - 5 - fi - prop, PY + fi + 3, botState.name(), stateCol);
 
-        int y = PY + HEADER + 1 + PAD;
-        int lx = PX + LX_OFF;
-        int vx = PX + VX_OFF;
+        int y = PY + hdr + 1 + PAD;
+        int lx = PX + LX_OFF + fi;
+        int vx = PX + VX_OFF + fi;
 
         if (cfg.isHudLineVisible("profile")) {
             kv(ctx, tr, lx, vx, y, "Profile", state.getActiveProfileName(), VALUE_COL);
@@ -327,6 +408,8 @@ public class BotHudRenderer {
                 kv(ctx, tr, lx, vx, y, "Target", ts, 0xFF888888);
             }
         }
+
+        drawProps(ctx, PX, PY, PW, ph); // decorative corner props (Custom style only)
     }
 
     /** The log panel, drawn from local origin (0,0) — now its own movable element. */
@@ -343,22 +426,23 @@ public class BotHudRenderer {
 
         int start = Math.max(0, src.size() - MAX_LOG);
         int shown = src.size() - start;
-        int logH  = HEADER + 1 + shown * 9 + 4;
+        int fi = fi();
+        int hdr = HEADER + fi;
+        int logH  = hdr + 1 + shown * 9 + 4 + fi;
         lastLogHeight = logH;
 
-        fill(ctx, 0,      0, LOG_PW,        logH,   LOG_BG);
-        fill(ctx, 0,      0, ACCENT,        logH,   0x88888888);
-        fill(ctx, ACCENT, 0, LOG_PW-ACCENT, HEADER, 0x10FFFFFF);
-        fill(ctx, ACCENT, HEADER, LOG_PW-ACCENT, 1, 0x20FFFFFF);
-        ctx.text(tr, "LOG", LX_OFF, 3, 0xFF555555, false);
+        drawBg(ctx, 0, 0, LOG_PW, logH, LOG_BG);
+        drawAccent(ctx, 0, 0, logH, 0x88888888);
+        drawHeader(ctx, 0, 0, LOG_PW, hdr, 0x10FFFFFF, 0x20FFFFFF);
+        ctx.text(tr, "LOG", LX_OFF + fi + 18, fi + 3, isTextured() ? D_TITLE : 0xFF555555, shadow());
 
-        int ly = HEADER + 1 + 2;
+        int ly = hdr + 1 + 2;
         for (int i = start; i < src.size(); i++) {
             String line = src.get(i);
             int msgStart = line.indexOf("] ");
             if (msgStart >= 0) line = line.substring(msgStart + 2);
             if (line.length() > 52) line = line.substring(0, 52) + "…";
-            ctx.text(tr, line, LX_OFF, ly, 0xFF999999, false);
+            ctx.text(tr, line, LX_OFF + fi, ly, isTextured() ? 0xFF4A423A : 0xFF999999, shadow());
             ly += 9;
         }
     }
@@ -367,43 +451,21 @@ public class BotHudRenderer {
     private static void drawSample(GuiGraphicsExtractor ctx) {
         Font tr = Minecraft.getInstance().font;
         int rows = 3;
-        int ph = HEADER + 1 + PAD + rows * LINE + PAD;
+        int fi = fi();
+        int hdr = HEADER + fi;
+        int prop = isCustom() ? 6 : 0;
+        int ph = hdr + 1 + PAD + rows * LINE + PAD + fi;
         lastPanelHeight = ph;
-        fill(ctx, PX, PY, PW, ph, BG);
-        fill(ctx, PX, PY, ACCENT, ph, 0xFF44EE44);
-        fill(ctx, PX+ACCENT, PY, PW-ACCENT, HEADER, HEADER_TINT);
-        fill(ctx, PX+ACCENT, PY+HEADER, PW-ACCENT, 1, DIVIDER);
-        ctx.text(tr, "Ceres", PX + LX_OFF, PY + 3, 0xFFAAAAAA, false);
-        int y = PY + HEADER + 1 + PAD;
-        kv(ctx, tr, PX + LX_OFF, PX + VX_OFF, y, "Profile", "Sample", VALUE_COL); y += LINE;
-        kv(ctx, tr, PX + LX_OFF, PX + VX_OFF, y, "Area", "Garden", VALUE_COL);    y += LINE;
-        kv(ctx, tr, PX + LX_OFF, PX + VX_OFF, y, "Pests", "0 / 4", 0xFF44EE44);
-    }
-
-    // ── Keybind hints element (drawn from local origin) ──────────────────────────
-
-    private static int hintPanelWidth() {
-        Font tr = Minecraft.getInstance().font;
-        int w = 0;
-        for (String h : HINTS) w = Math.max(w, tr.width(h));
-        return w + HINT_PAD * 2;
-    }
-
-    private static int hintPanelHeight() {
-        return HINTS.length * HINT_LINE_H + HINT_PAD * 2 - 1;
-    }
-
-    private static void drawHints(GuiGraphicsExtractor ctx) {
-        Font tr = Minecraft.getInstance().font;
-        int w = hintPanelWidth();
-        int h = hintPanelHeight();
-        fill(ctx, 0, 0, w, h, 0x90000000);
-        fill(ctx, 0, 0, ACCENT, h, 0x88666666);
-        int hy = HINT_PAD;
-        for (String hint : HINTS) {
-            ctx.text(tr, hint, HINT_PAD + ACCENT, hy, HINT_COL, false);
-            hy += HINT_LINE_H;
-        }
+        drawBg(ctx, PX, PY, PW, ph, BG);
+        drawAccent(ctx, PX, PY, ph, stateColour(BotState.RUNNING));
+        drawHeader(ctx, PX, PY, PW, hdr, HEADER_TINT, DIVIDER);
+        ctx.text(tr, "Ceres", PX + LX_OFF + fi + prop, PY + fi + 3, titleCol(), shadow());
+        int y = PY + hdr + 1 + PAD;
+        int lx = PX + LX_OFF + fi, vx = PX + VX_OFF + fi;
+        kv(ctx, tr, lx, vx, y, "Profile", "Sample", VALUE_COL); y += LINE;
+        kv(ctx, tr, lx, vx, y, "Area", "Garden", VALUE_COL);    y += LINE;
+        kv(ctx, tr, lx, vx, y, "Pests", "0 / 4", 0xFF44EE44);
+        drawProps(ctx, PX, PY, PW, ph);
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -415,8 +477,8 @@ public class BotHudRenderer {
     private static void kv(GuiGraphicsExtractor ctx, Font tr,
                             int lx, int vx, int y,
                             String label, String value, int valueCol) {
-        ctx.text(tr, label, lx, y, LABEL_COL, false);
-        ctx.text(tr, value, vx, y, valueCol, false);
+        ctx.text(tr, label, lx, y, labelCol(), shadow());
+        ctx.text(tr, value, vx, y, mapVal(valueCol), shadow());
     }
 
     /**

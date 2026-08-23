@@ -89,7 +89,7 @@ public class BotConfigScreen extends Screen {
     public void onClose() {
         config.save();
         BotLogger.getInstance().logInfo("BotConfigScreen: Config saved");
-        this.minecraft.setScreen(parent);
+        this.minecraft.gui.setScreen(parent);
     }
 
     @Override

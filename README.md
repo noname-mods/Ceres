@@ -5,7 +5,7 @@ Named after the Roman goddess of agriculture.
 
 **GitHub:** <https://github.com/noname-mods/Ceres>
 
-> **Requires [PlayerAPI](https://github.com/noname-mods/PlayerAPI) and [YetAnotherConfigLib](https://modrinth.com/mod/yacl) to run.**  
+> **Requires [PlayerAPI](https://github.com/noname-mods/PlayerAPI) 2.0.0+ and [Fabric API](https://modrinth.com/mod/fabric-api) to run.**  
 > [ModMenu](https://modrinth.com/mod/modmenu) is optional — it adds a settings button to the mod list.
 
 ---
@@ -52,7 +52,7 @@ Every row can be individually shown or hidden in the config screen. The main pan
 Ceres counts every crop block broken and keeps a rolling 30-second window. The live BPS figure in the HUD reflects your actual throughput, giving you a consistent number to compare across paths and crops.
 
 ### Fully Configurable
-All settings are exposed through a YACL config screen with seven tabs. Open it from ModMenu, the `/ceres` command, or a keybind. No file editing required.
+All settings are exposed through a config screen with seven tabs. Open it from ModMenu, the `/ceres` command, or a keybind. No file editing required.
 
 ---
 
@@ -77,12 +77,11 @@ Type `/ceres` in chat to open the config screen directly.
 
 ## Installation
 
-1. Install [Fabric Loader](https://fabricmc.net/) for Minecraft 26.1.2
+1. Install [Fabric Loader](https://fabricmc.net/) for Minecraft 26.2
 2. Install [Fabric API](https://modrinth.com/mod/fabric-api)
 3. Install [PlayerAPI](https://github.com/noname-mods/PlayerAPI)
-4. Install [YetAnotherConfigLib](https://modrinth.com/mod/yacl)
-5. Install [ModMenu](https://modrinth.com/mod/modmenu) *(optional)*
-6. Drop `ceres-*.jar` into your `mods` folder
+4. Install [ModMenu](https://modrinth.com/mod/modmenu) *(optional)*
+5. Drop `ceres-*.jar` into your `mods` folder
 
 ---
 
@@ -90,7 +89,7 @@ Type `/ceres` in chat to open the config screen directly.
 
 | Minecraft | Fabric Loader | Java |
 |---|---|---|
-| 26.1.2 | ≥ 0.19.2 | 21 |
+| 26.2 | ≥ 0.19.3 | 25 |
 
 ---
 

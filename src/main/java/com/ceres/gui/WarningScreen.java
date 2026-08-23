@@ -7,7 +7,7 @@ import net.minecraft.network.chat.Component;
 
 /**
  * Simple modal warning screen.
- * Usage: Minecraft.getInstance().setScreen(new WarningScreen("message", parent))
+ * Usage: Minecraft.getInstance().gui.setScreen(new WarningScreen("message", parent))
  */
 public class WarningScreen extends Screen {
 
@@ -46,7 +46,7 @@ public class WarningScreen extends Screen {
 
     @Override
     public void onClose() {
-        this.minecraft.setScreen(parent);
+        this.minecraft.gui.setScreen(parent);
     }
 
     @Override

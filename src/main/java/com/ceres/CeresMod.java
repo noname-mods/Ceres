@@ -119,7 +119,7 @@ public class CeresMod implements ClientModInitializer {
         if (openConfigNextTick) {
             openConfigNextTick = false;
             try {
-                Minecraft.getInstance().setScreen(CeresConfigScreen.create(null));
+                Minecraft.getInstance().gui.setScreen(CeresConfigScreen.create(null));
             } catch (Exception e) {
                 BotLogger.getInstance().logError("Failed to open config screen: " + e.getMessage());
             }
@@ -160,8 +160,8 @@ public class CeresMod implements ClientModInitializer {
 
     private void handleKeybinds(BotStateManager state) {
         if (keyToggleGui.consumeClick())      state.toggleGuiVisible();
-        if (keyOpenPathGui.consumeClick())    Minecraft.getInstance().setScreen(new PathEditorScreen());
-        if (keyOpenConfig.consumeClick())     Minecraft.getInstance().setScreen(
+        if (keyOpenPathGui.consumeClick())    Minecraft.getInstance().gui.setScreen(new PathEditorScreen());
+        if (keyOpenConfig.consumeClick())     Minecraft.getInstance().gui.setScreen(
                                                 CeresConfigScreen.create(null));
         if (keyStartPrimary.consumeClick()) {
             if (state.isGuiVisible()) autoLoadAndStart(state, PathType.PRIMARY);

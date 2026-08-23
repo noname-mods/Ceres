@@ -84,7 +84,7 @@ public class MouseLookMixin {
     /** Block hotbar scroll wheel — only in-game, not while any screen is open. */
     @Inject(method = "onScroll", at = @At("HEAD"), cancellable = true)
     private void ceres$blockScrollWhenRunning(long window, double horizontal, double vertical, CallbackInfo ci) {
-        if (Minecraft.getInstance().screen == null
+        if (Minecraft.getInstance().gui.screen() == null
                 && BotStateManager.getInstance().getCurrentState() == BotState.RUNNING) {
             ci.cancel();
         }
@@ -98,7 +98,7 @@ public class MouseLookMixin {
     @Inject(method = "onButton", at = @At("HEAD"), cancellable = true)
     private void ceres$blockClicksWhenRunning(long window, MouseButtonInfo buttonInfo, int action, CallbackInfo ci) {
         int button = buttonInfo.button();
-        if (Minecraft.getInstance().screen == null
+        if (Minecraft.getInstance().gui.screen() == null
                 && (button == 0 || button == 1)
                 && BotStateManager.getInstance().getCurrentState() == BotState.RUNNING) {
             ci.cancel();

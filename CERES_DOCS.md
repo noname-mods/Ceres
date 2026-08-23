@@ -1,7 +1,7 @@
 # Ceres — Design & Reference Documentation
 
-**Version:** 1.1.4  
-**Minecraft:** 26.1.2 (Fabric)  
+**Version:** 1.1.5  
+**Minecraft:** 26.2 (Fabric)  
 **Depends on:** PlayerAPI 1.18.0+  
 
 ---
@@ -45,7 +45,7 @@
 
 ## 1. Overview & Purpose
 
-Ceres is a **client-side Fabric farming automation mod** for Minecraft 26.1.2. It moves the player along a pre-recorded path, holds the attack key to break crops, and manages a suite of supporting systems: repellent auto-use, safety checkers, a live HUD overlay, and a GUI for editing paths and configuration.
+Ceres is a **client-side Fabric farming automation mod** for Minecraft 26.2. It moves the player along a pre-recorded path, holds the attack key to break crops, and manages a suite of supporting systems: repellent auto-use, safety checkers, a live HUD overlay, and a GUI for editing paths and configuration.
 
 Ceres is built entirely on top of **PlayerAPI** — it never imports Minecraft internals directly. All player movement, inventory access, interaction, and world queries go through PlayerAPI's abstraction layer.
 
@@ -87,7 +87,7 @@ CeresMod (entry point)
 │
 ├── BotHudRenderer                           — HUD overlay drawn via HudRenderCallback
 │
-├── CeresConfigScreen                        — YACL config GUI (/ceres)
+├── CeresConfigScreen                        — config GUI (/ceres)
 │
 ├── PathEditorScreen                         — waypoint editor GUI (I key)
 │
@@ -126,8 +126,8 @@ PlayerAPIEvents.TICK (main game thread, every tick)
 
 ## 3. Installation
 
-1. Install Fabric Loader 0.19.2 for Minecraft 26.1.2.
-2. Install Fabric API 0.149.1+26.1.2.
+1. Install Fabric Loader 0.19.3 for Minecraft 26.2.
+2. Install Fabric API 0.152.1+26.2.
 3. Place **PlayerAPI** `playerapi-1.18.0.jar` (or newer) in your mods folder.
 4. Place **Ceres** `ceres-1.1.4.jar` in your mods folder.
 5. (Optional) Install ModMenu to get the "Config" button in the mods list.
@@ -720,7 +720,7 @@ Opened by:
 - The "Open Config" keybind (unbound by default).
 - The ModMenu "Config" button (if ModMenu is installed).
 
-The config screen is built with **YACL (Yet Another Config Library)** and has six tabs:
+The config screen is built with **PlayerAPI's built-in, annotation-driven config library** (`PlayerConfig.createScreen`; the former YACL dependency was dropped in the 26.2 release) and has six tabs:
 
 #### Bot Settings tab
 - Sneak on Path Start
@@ -770,7 +770,7 @@ Three alarm sound groups (Cycle Complete, Stop Alert, Warn Alert), each with:
 
 Opened by the **I** keybind (default).
 
-The Path Editor is a custom screen (not YACL) that lets you record, edit, and manage waypoints for both path types.
+The Path Editor is a custom screen (not the annotation-driven config lib) that lets you record, edit, and manage waypoints for both path types.
 
 #### Layout
 - Top: Profile controls (save/load/delete, open profiles folder).
