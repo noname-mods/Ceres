@@ -57,7 +57,7 @@ public class BotConfig {
      *   6 — added hudX / hudY / hudScale (shared HUD editor layout)
      *   7 — added keybindHintsVisible + hints HUD element layout (hintsHudX/Y/Scale, hintsPositioned)
      */
-    private static final int CURRENT_VERSION = 9;
+    private static final int CURRENT_VERSION = 10;
 
     /** All toggleable HUD row keys, in display order. */
     public static final List<String> ALL_HUD_LINES = List.of(
@@ -77,10 +77,31 @@ public class BotConfig {
     @ConfigOption(category = "Checkers", name = "Min Pest Count for Alarm", desc = "Alert when pests reach this count.")
     @Slider(min = 1, max = 8, step = 1)
     private int minPestCount = 4;
-    @ConfigOption(category = "Developer", name = "Log Level", desc = "0=error, 1=warn, 2=info, 3=debug.")
-    @Slider(min = 0, max = 3, step = 1)
+    @ConfigOption(category = "Developer", name = "Log Level", desc = "How much detail the bot logs (console + file).")
+    @Dropdown
     @OnChange("onLogLevelChanged")
-    private int logLevel = BotLogger.LEVEL_WARN;
+    private LogLevel logLevel = LogLevel.WARN;
+
+    /**
+     * Log verbosity, shown as a labelled dropdown. Each constant maps to the matching {@link BotLogger}
+     * level, so selecting a name always sets the correct level (the old int slider was mismatched with the
+     * logger's constants). Ordered least→most verbose.
+     */
+    public enum LogLevel {
+        ERROR("Error", BotLogger.LEVEL_ERROR),
+        WARN ("Warn",  BotLogger.LEVEL_WARN),
+        INFO ("Info",  BotLogger.LEVEL_INFO),
+        DEBUG("Debug", BotLogger.LEVEL_DEBUG);
+        public final String label;
+        public final int level;
+        LogLevel(String label, int level) { this.label = label; this.level = level; }
+        @Override public String toString() { return label; }
+        /** Map a raw {@link BotLogger} level int back to the enum (defaults to WARN if none match). */
+        public static LogLevel fromLevel(int lv) {
+            for (LogLevel e : values()) if (e.level == lv) return e;
+            return WARN;
+        }
+    }
     @ConfigOption(category = "Bot Settings", name = "Sneak on Path Start", desc = "Hold sneak briefly when a path begins.")
     @Toggle
     private boolean sneakOnPathStart = true;
@@ -309,7 +330,7 @@ public class BotConfig {
                 if (loaded != null) {
                     this.configVersion             = CURRENT_VERSION;
                     this.minPestCount              = Math.max(1, Math.min(8, loaded.minPestCount));
-                    this.logLevel                  = loaded.logLevel;
+                    this.logLevel                  = loaded.logLevel != null ? loaded.logLevel : LogLevel.WARN;
                     this.sneakOnPathStart          = loaded.sneakOnPathStart;
                     this.repellentReapplyEnabled   = loaded.repellentReapplyEnabled;
                     this.inventoryCheckerEnabled   = loaded.inventoryCheckerEnabled;
@@ -372,7 +393,7 @@ public class BotConfig {
     }
 
     private void applyRuntimeFields() {
-        BotLogger.getInstance().setLogLevel(logLevel);
+        BotLogger.getInstance().setLogLevel(logLevel.level);
         HumanProfile.getInstance().enableMicroLook = microLookEnabled;
     }
 
@@ -410,10 +431,24 @@ public class BotConfig {
         if (version < 7) json = migrateV6toV7(json);
         if (version < 8) json = migrateV7toV8(json);
         if (version < 9) json = migrateV8toV9(json);
+        if (version < 10) json = migrateV9toV10(json);
 
         json.addProperty("configVersion", CURRENT_VERSION);
         BotLogger.getInstance().logInfo("BotConfig: loaded (schema v" + version
                 + (version < CURRENT_VERSION ? " → migrated to v" + CURRENT_VERSION : "") + ")");
+        return json;
+    }
+
+    /**
+     * v9 → v10: {@code logLevel} changed from an int slider (whose 0–3 range never matched BotLogger's
+     * 1–4 constants) to a {@code LogLevel} enum. Map the old numeric value through the logger constants to
+     * the enum name so it deserializes correctly; anything that doesn't map falls back to WARN.
+     */
+    private static JsonObject migrateV9toV10(JsonObject json) {
+        if (json.has("logLevel") && json.get("logLevel").isJsonPrimitive()
+                && json.get("logLevel").getAsJsonPrimitive().isNumber()) {
+            json.addProperty("logLevel", LogLevel.fromLevel(json.get("logLevel").getAsInt()).name());
+        }
         return json;
     }
 
@@ -536,15 +571,15 @@ public class BotConfig {
     // A plot maxes at 8 pests; alerting at 0 is pointless — clamp to 1–8.
     public void setMinPestCount(int v) { minPestCount = Math.max(1, Math.min(8, v)); save(); }
 
-    public int getLogLevel() { return logLevel; }
+    public int getLogLevel() { return logLevel.level; }
     /** {@code @OnChange} hook: the config screen edits the field directly, so re-apply to the logger. */
     public void onLogLevelChanged() {
-        BotLogger.getInstance().setLogLevel(logLevel);
+        BotLogger.getInstance().setLogLevel(logLevel.level);
     }
 
     public void setLogLevel(int v) {
-        logLevel = v;
-        BotLogger.getInstance().setLogLevel(v);
+        logLevel = LogLevel.fromLevel(v);
+        BotLogger.getInstance().setLogLevel(logLevel.level);
         save();
     }
 

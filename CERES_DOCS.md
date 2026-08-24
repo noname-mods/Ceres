@@ -1,8 +1,8 @@
 # Ceres — Design & Reference Documentation
 
-**Version:** 1.1.5  
+**Version:** 1.1.6  
 **Minecraft:** 26.2 (Fabric)  
-**Depends on:** PlayerAPI 1.18.0+  
+**Depends on:** PlayerAPI 2.0.0+  
 
 ---
 
@@ -128,8 +128,8 @@ PlayerAPIEvents.TICK (main game thread, every tick)
 
 1. Install Fabric Loader 0.19.3 for Minecraft 26.2.
 2. Install Fabric API 0.152.1+26.2.
-3. Place **PlayerAPI** `playerapi-1.18.0.jar` (or newer) in your mods folder.
-4. Place **Ceres** `ceres-1.1.4.jar` in your mods folder.
+3. Place **PlayerAPI** `playerapi-2.0.0.jar` (or newer) in your mods folder.
+4. Place **Ceres** `ceres-1.1.6.jar` in your mods folder.
 5. (Optional) Install ModMenu to get the "Config" button in the mods list.
 
 Ceres generates its config files in `.minecraft/config/ceres/` on first launch.

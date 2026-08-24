@@ -4,6 +4,18 @@
 
 ---
 
+## [1.1.6] - 2026-08-23
+
+### Fixed
+- **Log Level config.** It was a bare 0–3 number slider whose range never matched the logger's actual
+  levels (so "0" logged nothing and "Debug" never reached real debug). It's now a labelled **Error / Warn /
+  Info / Debug** dropdown mapped to the correct levels. Existing configs migrate automatically (schema v10).
+
+### Removed
+- Dead `BotConfigScreen` (an orphaned pre-config-library screen, no longer referenced).
+
+---
+
 ## [1.1.5] - 2026-08-23
 
 ### Changed
