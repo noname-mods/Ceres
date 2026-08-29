@@ -5,7 +5,7 @@ Named after the Roman goddess of agriculture.
 
 **GitHub:** <https://github.com/noname-mods/Ceres>
 
-> **Requires [PlayerAPI](https://github.com/noname-mods/PlayerAPI) 2.0.0+ and [Fabric API](https://modrinth.com/mod/fabric-api) to run.**  
+> **Requires [PlayerAPI](https://github.com/noname-mods/PlayerAPI) 2.1.0+ and [Fabric API](https://modrinth.com/mod/fabric-api) to run.**  
 > [ModMenu](https://modrinth.com/mod/modmenu) is optional — it adds a settings button to the mod list.
 
 ---

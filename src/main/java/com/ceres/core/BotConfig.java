@@ -12,6 +12,7 @@ import com.playerapi.config.annotations.ConfigLayout;
 import com.playerapi.config.annotations.ConfigMapToggles;
 import com.playerapi.config.annotations.ConfigOption;
 import com.playerapi.config.annotations.Dropdown;
+import com.playerapi.config.annotations.InfoText;
 import com.playerapi.config.annotations.OnChange;
 import com.playerapi.config.annotations.ShowIf;
 import com.playerapi.config.annotations.Slider;
@@ -212,7 +213,12 @@ public class BotConfig {
     private ConfigStyle hudStyle = ConfigStyle.CUSTOM;
 
     // ── Developer ─────────────────────────────────────────────────────────────
-    @ConfigOption(category = "Developer", name = "Bypass Area Check", desc = "Skip the Garden-area safety gate.")
+    @ConfigOption(category = "Developer", name = "&c&lDeveloper", desc =
+            "&7Testing & diagnostic options — leave these &loff&r&7 for normal play.")
+    @InfoText
+    private transient String devNote = "";
+    @ConfigOption(category = "Developer", name = "Bypass Area Check",
+            desc = "&cSafety bypass:&r skip the Garden-area gate that keeps the bot from running where it shouldn't. Testing only.")
     @Toggle
     private boolean bypassAreaCheck = false;
     @ConfigOption(category = "Developer", name = "Micro Look", desc = "Tiny idle look movements (anti-AFK experiment).")

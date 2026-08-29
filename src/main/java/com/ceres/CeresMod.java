@@ -125,6 +125,13 @@ public class CeresMod implements ClientModInitializer {
             }
         }
 
+        // Hypixel-only mod: stay fully inert off Hypixel (stop the bot if it was somehow running).
+        if (!com.playerapi.HypixelInfo.isOnHypixel()) {
+            if (BotStateManager.getInstance().getCurrentState() != BotState.STOPPED)
+                BotStateManager.getInstance().stopBot();
+            return;
+        }
+
         long currentTick = Scheduler.getCurrentTick();
 
         CeresTabListReader.update();

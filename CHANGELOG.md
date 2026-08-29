@@ -4,6 +4,15 @@
 
 ---
 
+## [1.1.7] - 2026-08-29
+
+### Changed
+- **Hypixel-only gate.** Ceres now stays fully inert (and stops the bot) unless you're connected to Hypixel
+  (detected from the server address you connected to). It's a Hypixel SkyBlock tool, so it won't try to act
+  on other servers. Requires PlayerAPI 2.1.0.
+
+---
+
 ## [1.1.6] - 2026-08-23
 
 ### Fixed
